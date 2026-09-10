@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Home</title>
-<script src="js/config.js?v=17"></script>
-<script src="js/theme-init.js?v=17"></script>
-<script src="js/auth-init.js?v=17"></script>
-<link rel="stylesheet" href="css/base.css?v=17">
-<link rel="stylesheet" href="css/layout.css?v=17">
-<link rel="stylesheet" href="css/components.css?v=17">
-<link rel="stylesheet" href="css/charts.css?v=17">
-<link rel="stylesheet" href="css/home.css?v=17">
+<script src="js/config.js?v=18"></script>
+<script src="js/theme-init.js?v=18"></script>
+<script src="js/auth-init.js?v=18"></script>
+<link rel="stylesheet" href="css/base.css?v=18">
+<link rel="stylesheet" href="css/layout.css?v=18">
+<link rel="stylesheet" href="css/components.css?v=18">
+<link rel="stylesheet" href="css/charts.css?v=18">
+<link rel="stylesheet" href="css/home.css?v=18">
 </head>
 <body>
-<script src="js/auth-gate.js?v=17"></script>
+<script src="js/auth-gate.js?v=18"></script>
 <div id="header-root"></div>
 
 <main class="page-shell">
@@ -25,13 +25,20 @@
     </div>
   </div>
 
-  <section class="section" id="section-currently-reading">
-    <div class="section-heading">
-      <h2>Currently Reading</h2>
-      <a class="see-all" href="currently-reading.html">See all →</a>
-    </div>
-    <div id="currently-reading-rail" class="rail"></div>
-  </section>
+  <div class="two-col home-top-row">
+    <section class="section" id="section-currently-reading">
+      <div class="section-heading">
+        <h2>Currently Reading</h2>
+        <a class="see-all" href="currently-reading.html">See all →</a>
+      </div>
+      <div id="currently-reading-rail" class="rail"></div>
+    </section>
+
+    <section class="section panel" id="goal-panel">
+      <div class="eyebrow">Reading Goal</div>
+      <div id="goal-content" style="margin-top:14px;"></div>
+    </section>
+  </div>
 
   <div class="two-col">
     <div>
@@ -53,12 +60,7 @@
     </div>
 
     <div>
-      <section class="section panel" id="goal-panel">
-        <div class="eyebrow">Reading Goal</div>
-        <div id="goal-content" style="margin-top:14px;"></div>
-      </section>
-
-      <section class="section panel" id="stats-panel" style="margin-top:24px;">
+      <section class="section panel" id="stats-panel">
         <div class="eyebrow">This Year So Far</div>
         <div id="mini-stats" class="kv-list" style="margin-top:14px;"></div>
       </section>
@@ -66,13 +68,13 @@
   </div>
 </main>
 
-<script src="js/storage.js?v=17"></script>
-<script src="js/books-api.js?v=17"></script>
-<script src="js/utils.js?v=17"></script>
-<script src="js/charts.js?v=17"></script>
-<script src="js/nav.js?v=17"></script>
-<script src="js/add-book.js?v=17"></script>
-<script src="js/book-preview.js?v=17"></script>
-<script src="js/home.js?v=17"></script>
+<script src="js/storage.js?v=18"></script>
+<script src="js/books-api.js?v=18"></script>
+<script src="js/utils.js?v=18"></script>
+<script src="js/charts.js?v=18"></script>
+<script src="js/nav.js?v=18"></script>
+<script src="js/add-book.js?v=18"></script>
+<script src="js/book-preview.js?v=18"></script>
+<script src="js/home.js?v=18"></script>
 </body>
 </html>

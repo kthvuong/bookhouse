@@ -4,6 +4,8 @@
 
 #home-greeting { margin-top: 4px; }
 
+.home-top-row { align-items: start; }
+
 .cr-card { width: 168px; }
 .cr-card .cover-wrap { aspect-ratio: 2/3; }
 .cr-card .progress-track { height: 5px; margin-top: 8px; }
