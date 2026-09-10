@@ -274,34 +274,111 @@ async function superlativesSectionHTML(year, stats, record) {
     const bookId = picks[s.key];
     const entry = bookId ? eligible.find((e) => e.book.id === bookId) : null;
     const cover = entry ? await coverMarkup(entry.book) : '';
-    const options = [`<option value="">— choose —</option>`].concat(
-      eligible.map((e) => `<option value="${e.book.id}" ${e.book.id === bookId ? 'selected' : ''}>${escapeHtml(e.book.title)}</option>`)
-    ).join('');
     return `
       <div class="superlative-card">
-        <div class="cover-wrap ${entry ? '' : 'empty'}">${entry ? cover : 'Not chosen yet'}</div>
+        <div class="cover-wrap ${entry ? '' : 'empty'}" data-superlative-pick="${s.key}" data-superlative-year="${year}" role="button" tabindex="0">${entry ? cover : 'Not chosen yet'}</div>
         <div class="label">${s.label}</div>
         ${entry ? `<div class="pick-title">${escapeHtml(entry.book.title)}</div>` : ''}
-        <select class="select" data-superlative="${s.key}" data-superlative-year="${year}" style="margin-top:6px;font-size:12px;padding:5px 8px;">${options}</select>
+        <div class="superlative-actions">
+          <button type="button" class="superlative-pick-link" data-superlative-pick="${s.key}" data-superlative-year="${year}">${entry ? 'Change pick' : 'Choose a book'}</button>
+          ${entry ? `<button type="button" class="superlative-pick-link superlative-clear-link" data-superlative-clear="${s.key}" data-superlative-year="${year}">Clear</button>` : ''}
+        </div>
       </div>`;
   }));
   return `
     <section class="stat-section fade-in">
       <h2 class="stat-section-title">Your Picks for ${year}</h2>
-      <p class="stat-section-caption">Choose from the books you finished this year.</p>
+      <p class="stat-section-caption">Pick your favorites from the books you finished this year.</p>
       <div class="superlative-grid">${cards.join('')}</div>
     </section>`;
 }
 
-/** Wires up superlative <select> elements rendered anywhere in `root`; calls onSaved() after each pick persists. */
-function wireSuperlatives(root, onSaved) {
-  root.querySelectorAll('[data-superlative]').forEach((sel) => {
-    sel.addEventListener('change', async () => {
-      const year = Number(sel.dataset.superlativeYear);
-      await Storage.Wrapped.save(year, { [sel.dataset.superlative]: sel.value || null });
-      onSaved && onSaved();
+/** Wires up superlative pick/clear controls rendered anywhere in `root`;
+ *  calls onSaved() after each pick persists. `eligible` is this year's
+ *  finished entries, used to populate the cover-based picker modal. */
+function wireSuperlatives(root, eligible, onSaved) {
+  async function setPick(key, year, bookId) {
+    await Storage.Wrapped.save(year, { [key]: bookId || null });
+    onSaved && onSaved();
+  }
+
+  root.querySelectorAll('[data-superlative-clear]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setPick(btn.dataset.superlativeClear, Number(btn.dataset.superlativeYear), null);
     });
   });
+
+  root.querySelectorAll('[data-superlative-pick]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const superlative = SUPERLATIVES.find((s) => s.key === el.dataset.superlativePick);
+      openSuperlativePicker({
+        label: superlative ? superlative.label : '',
+        eligible,
+        onPick: (bookId) => setPick(el.dataset.superlativePick, Number(el.dataset.superlativeYear), bookId),
+      });
+    });
+    if (el.getAttribute('role') === 'button') {
+      el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
+    }
+  });
+}
+
+/** A searchable, cover-based book picker modal — used to make a superlative
+ *  pick without scanning a plain text dropdown of every book you finished. */
+function openSuperlativePicker({ label, eligible, onPick }) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay open';
+  overlay.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h3>${escapeHtml(label)}</h3>
+        <button class="btn btn-ghost btn-icon" data-picker-close>${ICONS.close}</button>
+      </div>
+      <div class="modal-body">
+        <input class="input" id="superlative-picker-search" placeholder="Search your finished books…" autocomplete="off">
+        <div id="superlative-picker-list" style="margin-top:14px;max-height:360px;overflow-y:auto;"></div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  function close() { overlay.remove(); }
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  overlay.querySelector('[data-picker-close]').addEventListener('click', close);
+
+  const listEl = overlay.querySelector('#superlative-picker-list');
+  const searchInput = overlay.querySelector('#superlative-picker-search');
+
+  async function renderList(query) {
+    const q = query.trim().toLowerCase();
+    const filtered = q
+      ? eligible.filter((e) => e.book.title.toLowerCase().includes(q) || authorList(e.book.authors).toLowerCase().includes(q))
+      : eligible;
+    if (!filtered.length) {
+      listEl.innerHTML = `<div class="empty-state" style="padding:24px;"><p>No matches.</p></div>`;
+      return;
+    }
+    const rows = await Promise.all(filtered.map(async (e) => `
+      <div class="ab-result-row" data-pick-book-id="${e.book.id}">
+        ${await coverMarkup(e.book, 'thumb')}
+        <div class="meta">
+          <div class="title">${escapeHtml(e.book.title)}</div>
+          <div class="sub">${escapeHtml(authorList(e.book.authors))}</div>
+        </div>
+        <span class="chevron">›</span>
+      </div>`));
+    listEl.innerHTML = rows.join('');
+    listEl.querySelectorAll('[data-pick-book-id]').forEach((row) => {
+      row.addEventListener('click', () => {
+        onPick(row.dataset.pickBookId);
+        close();
+      });
+    });
+  }
+
+  renderList('');
+  searchInput.addEventListener('input', debounce((e) => renderList(e.target.value), 150));
+  setTimeout(() => searchInput.focus(), 50);
 }
 
 /** Compact, theme-matched year picker — replaces a plain <select> with a row of chips. */

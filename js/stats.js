@@ -88,7 +88,7 @@
         collageSectionHTML(stats, stats.period.type === 'allTime' ? 'Every book you\'ve finished' : `Every book you finished in ${stats.label}`),
       ]);
       container.innerHTML = sections.join('');
-      if (isYearView) wireSuperlatives(container, render);
+      if (isYearView) wireSuperlatives(container, stats.finished, render);
     } catch (err) {
       console.error('Statistics render failed:', err);
       container.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><h3>Something went wrong</h3><p>${escapeHtml(err && err.message ? err.message : 'Unknown error')}</p></div>`;
