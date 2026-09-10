@@ -41,7 +41,7 @@
       if (!finished.length) {
         return `<div class="month-tile empty"><h3 class="serif">${name}</h3><div class="count-line">No finishes</div></div>`;
       }
-      const covers = await Promise.all(finished.slice(0, 4).map((e) => coverMarkup(e.book)));
+      const covers = await Promise.all(finished.slice(0, 5).map((e) => coverMarkup(e.book)));
       return `
         <div class="month-tile" data-month="${m}">
           <h3 class="serif">${name}</h3>
