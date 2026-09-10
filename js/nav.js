@@ -62,11 +62,12 @@ function initHeader(activeKey) {
       <a class="brand" href="index.html"><span class="brand-mark">&#9679;</span>${APP_NAME}</a>
       <nav class="main-nav" id="main-nav">${navLinks}</nav>
       <div class="header-actions">
-        <div class="search-box">
+        <div class="search-box" id="search-box">
           ${ICONS.search}
-          <input type="text" id="global-search-input" placeholder="Search your library or add a book…" autocomplete="off">
+          <input type="text" id="global-search-input" placeholder="Search books…" autocomplete="off">
           <div class="search-results-panel" id="global-search-panel" hidden></div>
         </div>
+        <button class="btn btn-ghost btn-icon search-toggle-btn" id="search-toggle-btn" aria-label="Search">${ICONS.search}</button>
         <button class="btn btn-primary btn-sm" id="add-book-btn">${ICONS.plus}<span>Add Book</span></button>
         <button class="btn btn-ghost btn-icon" id="theme-toggle-btn" title="Toggle theme" aria-label="Toggle theme">${currentTheme() === 'dark' ? ICONS.sun : ICONS.moon}</button>
         <button class="nav-toggle" id="nav-toggle" aria-label="Menu">${ICONS.menu}</button>
@@ -75,6 +76,14 @@ function initHeader(activeKey) {
   `;
 
   document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
+
+  const searchBox = document.getElementById('search-box');
+  document.getElementById('search-toggle-btn').addEventListener('click', () => {
+    searchBox.classList.toggle('mobile-open');
+    if (searchBox.classList.contains('mobile-open')) {
+      document.getElementById('global-search-input').focus();
+    }
+  });
 
   const navEl = document.getElementById('main-nav');
   const navToggle = document.getElementById('nav-toggle');
@@ -94,6 +103,11 @@ function initHeader(activeKey) {
   });
 
   initGlobalSearch();
+}
+
+function closeMobileSearch() {
+  const searchBox = document.getElementById('search-box');
+  if (searchBox) searchBox.classList.remove('mobile-open');
 }
 
 function initGlobalSearch() {
@@ -134,7 +148,7 @@ function initGlobalSearch() {
     const newResults = externalResults.filter((r) => !ownedKeys.has(r.externalId)).slice(0, 6);
 
     let html = renderSearchGroup('In your library', personalMatches.map(personalRowHTML));
-    html += renderSearchGroup('Add from Open Library', newResults.map(externalRowHTML));
+    html += renderSearchGroup('From Open Library', newResults.map(externalRowHTML));
     if (!personalMatches.length && !newResults.length) {
       html = `<div class="search-empty">No matches for "${escapeHtml(query)}"</div>`;
     }
@@ -145,8 +159,14 @@ function initGlobalSearch() {
 
   input.addEventListener('input', (e) => runSearch(e.target.value));
   input.addEventListener('focus', (e) => { if (e.target.value.trim().length >= 2) panel.hidden = false; });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMobileSearch(); });
   document.addEventListener('click', (e) => {
     if (!panel.contains(e.target) && e.target !== input) panel.hidden = true;
+    const searchBox = document.getElementById('search-box');
+    const toggleBtn = document.getElementById('search-toggle-btn');
+    if (searchBox && searchBox.classList.contains('mobile-open') && !searchBox.contains(e.target) && e.target !== toggleBtn) {
+      closeMobileSearch();
+    }
   });
 }
 
@@ -179,6 +199,7 @@ function externalRowHTML(result, idx) {
         <div class="title">${escapeHtml(result.title)}</div>
         <div class="sub">${escapeHtml(authorList(result.authors))}${result.firstPublishYear ? ' · ' + result.firstPublishYear : ''}</div>
       </div>
+      <span class="chevron">›</span>
     </div>`;
 }
 
@@ -192,7 +213,8 @@ function wireSearchPanelClicks(panel, personalMatches, externalResults) {
     row.addEventListener('click', () => {
       const result = externalResults[Number(row.dataset.externalIdx)];
       panel.hidden = true;
-      AddBookFlow.openWithResult(result);
+      closeMobileSearch();
+      BookPreviewFlow.open(result);
     });
   });
 }

@@ -11,7 +11,7 @@
 
   const hour = now.getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  document.getElementById('home-greeting').textContent = greeting;
+  document.getElementById('home-greeting').textContent = USER_NAME ? `${greeting}, ${USER_NAME}` : greeting;
 
   const entries = await Storage.ReadingEntries.allWithBooks();
   const thisYear = now.getFullYear();

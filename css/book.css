@@ -49,9 +49,14 @@
 .description-text.clamped { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
 .description-toggle { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--accent); cursor: pointer; background: none; border: none; padding: 0; }
 
+.subsection-label {
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-muted); margin-bottom: 14px;
+}
+
 /* ---- progress ---- */
-.progress-panel .progress-input-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
-.progress-panel .progress-input-row .field { max-width: 140px; }
+.progress-input-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; margin-top: 14px; }
+.progress-input-row .field { max-width: 140px; }
 .progress-stats-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   gap: 14px; margin-top: 18px;
@@ -71,25 +76,50 @@
 .session-row .session-minutes { color: var(--text-muted); font-size: 12.5px; }
 
 /* ---- quotes ---- */
-.quote-card {
-  padding: 16px 18px; background: var(--bg-elevated); border-left: 3px solid var(--accent-soft);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0; margin-bottom: 12px;
-  font-family: var(--font-serif); font-size: 15.5px; line-height: 1.6; font-style: italic; position: relative;
+.quote-item {
+  padding: 14px 16px; background: var(--bg-elevated); border-left: 3px solid var(--accent-soft);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0; margin-bottom: 10px; position: relative;
 }
-.quote-card .quote-page { font-family: var(--font-sans); font-style: normal; font-size: 11.5px; color: var(--text-muted); margin-top: 8px; }
-.quote-card .remove-btn { position: absolute; top: 10px; right: 12px; opacity: 0; background: none; border: none; cursor: pointer; color: var(--text-muted); font-family: var(--font-sans); font-style: normal; }
-.quote-card:hover .remove-btn { opacity: 1; }
+.quote-item .quote-text { font-family: var(--font-serif); font-size: 15.5px; line-height: 1.6; font-style: italic; margin: 0; }
+.quote-item .quote-page { font-size: 11.5px; color: var(--text-muted); margin-top: 8px; }
+.quote-item .quote-actions { display: flex; gap: 12px; margin-top: 8px; opacity: 0; transition: opacity var(--dur-fast); }
+.quote-item:hover .quote-actions, .quote-item:focus-within .quote-actions { opacity: 1; }
+.quote-item.editing { border-left-color: var(--accent); }
+
+.link-btn {
+  background: none; border: none; cursor: pointer; padding: 0;
+  font-size: 12px; font-weight: 600; color: var(--text-muted);
+}
+.link-btn:hover { color: var(--accent-strong); }
 
 .add-inline-form { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-top: 14px; }
 
-.tag-input-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
-.tag-input-row input { max-width: 200px; }
+.inline-reveal-form { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
 
-.collection-checklist { display: flex; flex-direction: column; gap: 8px; }
-.collection-checklist label { display: flex; align-items: center; gap: 10px; font-size: 14px; cursor: pointer; }
+.chip[id$="-chip"] { cursor: pointer; border-style: dashed; background: transparent; }
 
+/* ---- danger zone + sticky save bar ---- */
 .danger-zone { padding-top: var(--space-6); border-top: 1px solid var(--border); }
+
+.save-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 90;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 14px 24px;
+  max-width: 760px;
+  margin: 0 auto;
+  background: color-mix(in srgb, var(--bg-elevated) 96%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: 0 -8px 24px -8px hsl(var(--shadow-color) / 0.15);
+}
+.save-bar-hint { font-size: 13px; color: var(--text-muted); }
+.save-bar .btn-lg { flex-shrink: 0; }
 
 @media (max-width: 720px) {
   .book-header { grid-template-columns: 130px 1fr; gap: var(--space-4); }
+  .save-bar { flex-direction: row-reverse; justify-content: space-between; padding: 12px 16px; border-radius: 0; }
+  .save-bar-hint { display: none; }
+  .save-bar .btn-lg { flex: 1; }
 }

@@ -7,6 +7,7 @@
    ============================================================ */
 
 const APP_NAME = 'Bookhouse';
+const USER_NAME = 'Kathy';
 
 (function () {
   if (document.title && !document.title.startsWith(APP_NAME)) {

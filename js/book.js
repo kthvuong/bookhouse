@@ -1,6 +1,13 @@
 /* ============================================================
-   book.js — book detail page: status, rating, progress tracking,
-   sessions, review, notes, quotes, tags, collections.
+   book.js — book detail page.
+
+   Reading first, editing second: the header is read-only viewing,
+   and edits below are grouped into Reading Details, Rating &
+   Review, Favourite Quotes, Tags, and Collections. Status changes,
+   quotes, tags, and collection membership save immediately (each
+   is its own explicit action); format, dates, rating, and review
+   are staged locally and only persist when "Save Changes" is
+   pressed, via the sticky bar at the bottom of the page.
    ============================================================ */
 
 (async function () {
@@ -10,6 +17,20 @@
   const bookId = getQueryParam('id');
 
   let book, entry, progressUpdates, sessions, quotes, allCollections, myCollectionIds;
+  let staged, baseline;
+
+  function snapshotStaged(e) {
+    return {
+      format: e.format || 'physical',
+      dateStarted: e.dateStarted || '',
+      dateFinished: e.dateFinished || '',
+      rating: e.rating || 0,
+      review: e.review || '',
+    };
+  }
+  function isDirty() {
+    return JSON.stringify(staged) !== JSON.stringify(baseline);
+  }
 
   async function loadAll() {
     book = await Storage.Books.get(bookId);
@@ -24,6 +45,8 @@
     ]);
     const memberships = await Storage.Collections.collectionsForEntry(entry.id);
     myCollectionIds = new Set(memberships.map((m) => m.collectionId));
+    baseline = snapshotStaged(entry);
+    staged = { ...baseline };
     return true;
   }
 
@@ -45,14 +68,14 @@
     root.innerHTML = `
       ${headerHTML()}
       ${descriptionSectionHTML()}
-      ${progressSectionHTML()}
-      ${sessionsSectionHTML()}
-      ${reviewSectionHTML()}
-      ${notesSectionHTML()}
+      ${readingDetailsSectionHTML()}
+      ${ratingReviewSectionHTML()}
       ${quotesSectionHTML()}
       ${tagsSectionHTML()}
       ${collectionsSectionHTML()}
       ${dangerZoneHTML()}
+      <div style="height:88px;"></div>
+      ${saveBarHTML()}
     `;
     wireEvents();
     fillCoverAsync();
@@ -63,6 +86,10 @@
     if (!wrap) return;
     wrap.innerHTML = await coverMarkup(book);
   }
+
+  // ---------------------------------------------------------
+  // Sections
+  // ---------------------------------------------------------
 
   function headerHTML() {
     const genres = (book.genres || []).filter((g) => !g.includes(':')).slice(0, 8);
@@ -75,34 +102,6 @@
           <h1 class="serif">${escapeHtml(book.title)}</h1>
           ${book.subtitle ? `<div class="subtitle-line">${escapeHtml(book.subtitle)}</div>` : ''}
           <div class="authors-line">by ${escapeHtml(authorList(book.authors))}</div>
-
-          <div class="control-row">
-            <div class="field-inline">
-              <label class="mini">Status</label>
-              <div class="status-select-wrap">
-                <select class="status-select" id="status-select">
-                  ${Object.entries(STATUS_LABELS).map(([v, l]) => `<option value="${v}" ${entry.status === v ? 'selected' : ''}>${l}</option>`).join('')}
-                </select>
-              </div>
-            </div>
-            <div class="field-inline">
-              <label class="mini">Format</label>
-              <div class="status-select-wrap">
-                <select class="status-select" id="format-select">
-                  ${Object.entries(FORMAT_LABELS).map(([v, l]) => `<option value="${v}" ${entry.format === v ? 'selected' : ''}>${l}</option>`).join('')}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div class="control-row">
-            <div id="rating-input-mount"></div>
-          </div>
-
-          <div class="control-row">
-            <div class="field-inline"><label class="mini">Started</label><input type="date" class="input" id="date-started" value="${entry.dateStarted || ''}" style="width:150px;"></div>
-            <div class="field-inline"><label class="mini">Finished</label><input type="date" class="input" id="date-finished" value="${entry.dateFinished || ''}" style="width:150px;"></div>
-          </div>
 
           <div class="meta-strip">
             ${book.pageCount ? `<span class="meta-item"><strong>${book.pageCount}</strong> pages</span>` : ''}
@@ -126,91 +125,126 @@
       </div>`;
   }
 
-  function progressSectionHTML() {
+  function readingDetailsSectionHTML() {
+    return `
+      <div class="book-section">
+        <h2>Reading Details</h2>
+        <div class="control-row">
+          <div class="field-inline">
+            <label class="mini">Status</label>
+            <div class="status-select-wrap">
+              <select class="status-select" id="status-select">
+                ${Object.entries(STATUS_LABELS).map(([v, l]) => `<option value="${v}" ${entry.status === v ? 'selected' : ''}>${l}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="field-inline">
+            <label class="mini">Format</label>
+            <div class="status-select-wrap">
+              <select class="status-select" id="format-select">
+                ${Object.entries(FORMAT_LABELS).map(([v, l]) => `<option value="${v}" ${staged.format === v ? 'selected' : ''}>${l}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="control-row">
+          <div class="field-inline">
+            <label class="mini">Started</label>
+            <div class="date-with-today">
+              <input type="date" class="input" id="date-started" value="${staged.dateStarted}" style="width:150px;">
+              <button type="button" class="btn btn-ghost btn-sm" data-today-for="date-started">Today</button>
+            </div>
+          </div>
+          <div class="field-inline">
+            <label class="mini">Finished</label>
+            <div class="date-with-today">
+              <input type="date" class="input" id="date-finished" value="${staged.dateFinished}" style="width:150px;">
+              <button type="button" class="btn btn-ghost btn-sm" data-today-for="date-finished">Today</button>
+            </div>
+          </div>
+        </div>
+
+        ${progressBlockHTML()}
+        ${sessionsBlockHTML()}
+      </div>`;
+  }
+
+  function progressBlockHTML() {
     const applicable = ['currently_reading', 'paused', 'finished'].includes(entry.status);
     if (!applicable) return '';
     const stats = computeProgressStats(entry, progressUpdates, book);
     const showSuggestFinish = entry.status !== 'finished' && stats.percent >= 100;
     return `
-      <div class="book-section progress-panel">
-        <h2>Reading Progress</h2>
-        <div class="progress-track"><span style="width:${stats.percent}%"></span></div>
-        <div class="progress-meta"><span>${stats.percent}% complete</span><span>${stats.pagesRead}${stats.totalPages ? ' / ' + stats.totalPages : ''} pages</span></div>
+      <hr class="divider">
+      <div class="subsection-label">Progress</div>
+      <div class="progress-track"><span style="width:${stats.percent}%"></span></div>
+      <div class="progress-meta"><span>${stats.percent}% complete</span><span>${stats.pagesRead}${stats.totalPages ? ' / ' + stats.totalPages : ''} pages</span></div>
 
-        ${showSuggestFinish ? `<div class="chip active" style="margin-top:12px;cursor:pointer;" id="suggest-finish-chip">Looks finished — mark as Finished →</div>` : ''}
+      ${showSuggestFinish ? `<div class="chip active" style="margin-top:12px;cursor:pointer;" id="suggest-finish-chip">Looks finished — mark as Finished →</div>` : ''}
 
-        ${entry.status !== 'finished' ? `
-        <div class="progress-input-row" style="margin-top:20px;">
-          <div class="field">
-            <label>Current page</label>
-            <input type="number" class="input" id="progress-page-input" min="0" ${book.pageCount ? `max="${book.pageCount}"` : ''} placeholder="e.g. 152">
-          </div>
-          <div class="field">
-            <label>or percent</label>
-            <input type="number" class="input" id="progress-percent-input" min="0" max="100" placeholder="e.g. 45">
-          </div>
-          <div class="field">
-            <label>Date</label>
-            <input type="date" class="input" id="progress-date-input" value="${todayStr()}" style="width:150px;">
-          </div>
-          <button class="btn btn-primary" id="log-progress-btn">Log Progress</button>
-        </div>` : ''}
-
-        <div class="progress-stats-grid">
-          <div class="stat"><div class="figure">${stats.pagesRead}</div><div class="label">Pages read</div></div>
-          <div class="stat"><div class="figure">${stats.pagesRemaining ?? '—'}</div><div class="label">Pages left</div></div>
-          <div class="stat"><div class="figure">${stats.avgPagesPerDay ? stats.avgPagesPerDay.toFixed(1) : '—'}</div><div class="label">Pages / day</div></div>
-          ${stats.estCompletionDate ? `<div class="stat subtle"><div class="figure" style="font-size:14px;">${formatDate(stats.estCompletionDate, 'short')}</div><div class="label">Est. finish</div></div>` : ''}
+      ${entry.status !== 'finished' ? `
+      <div class="progress-input-row" style="margin-top:20px;">
+        <div class="field">
+          <label>Current page</label>
+          <input type="number" class="input" id="progress-page-input" min="0" ${book.pageCount ? `max="${book.pageCount}"` : ''} placeholder="e.g. 152">
         </div>
-
-        ${progressUpdates.length ? `
-        <div class="progress-history">
-          <div class="eyebrow">History</div>
-          ${progressUpdates.slice().reverse().map((p) => `
-            <div class="progress-history-row" data-progress-id="${p.id}">
-              <span>${formatDate(p.date, 'short')}</span>
-              <span>${p.currentPage != null ? 'page ' + p.currentPage : ''}${p.percent != null ? ' · ' + p.percent + '%' : ''}</span>
-              <button class="remove-btn" data-remove-progress="${p.id}">Remove</button>
-            </div>`).join('')}
-        </div>` : ''}
-      </div>`;
-  }
-
-  function sessionsSectionHTML() {
-    return `
-      <div class="book-section">
-        <h2>Reading Sessions</h2>
-        <p class="text-muted" style="font-size:13px;margin-bottom:10px;">Optional — log individual sessions to power pace &amp; streak stats.</p>
-        ${sessions.length ? sessions.slice().reverse().map((s) => `
-          <div class="session-row" data-session-id="${s.id}">
-            <span>${formatDate(s.date, 'short')}</span>
-            <span class="session-pages">${s.pagesStarted != null && s.pagesEnded != null ? `p. ${s.pagesStarted}–${s.pagesEnded}` : ''}</span>
-            <span class="session-minutes">${s.minutes ? s.minutes + ' min' : ''}</span>
-            <button class="remove-btn" data-remove-session="${s.id}" style="opacity:0.5;">✕</button>
-          </div>`).join('') : ''}
-        <div class="add-inline-form">
-          <div class="field"><label>Date</label><input type="date" class="input" id="session-date" value="${todayStr()}" style="width:150px;"></div>
-          <div class="field"><label>Page from</label><input type="number" class="input" id="session-page-start" style="width:100px;"></div>
-          <div class="field"><label>Page to</label><input type="number" class="input" id="session-page-end" style="width:100px;"></div>
-          <div class="field"><label>Minutes</label><input type="number" class="input" id="session-minutes" style="width:100px;"></div>
-          <button class="btn btn-sm" id="add-session-btn">+ Add Session</button>
+        <div class="field">
+          <label>or percent</label>
+          <input type="number" class="input" id="progress-percent-input" min="0" max="100" placeholder="e.g. 45">
         </div>
+        <div class="field">
+          <label>Date</label>
+          <input type="date" class="input" id="progress-date-input" value="${todayStr()}" style="width:150px;">
+        </div>
+        <button class="btn btn-primary btn-sm" id="log-progress-btn">Log Progress</button>
+      </div>` : ''}
+
+      <div class="progress-stats-grid">
+        <div class="stat"><div class="figure">${stats.pagesRead}</div><div class="label">Pages read</div></div>
+        <div class="stat"><div class="figure">${stats.pagesRemaining ?? '—'}</div><div class="label">Pages left</div></div>
+        <div class="stat"><div class="figure">${stats.avgPagesPerDay ? stats.avgPagesPerDay.toFixed(1) : '—'}</div><div class="label">Pages / day</div></div>
+        ${stats.estCompletionDate ? `<div class="stat subtle"><div class="figure" style="font-size:14px;">${formatDate(stats.estCompletionDate, 'short')}</div><div class="label">Est. finish</div></div>` : ''}
+      </div>
+
+      ${progressUpdates.length ? `
+      <div class="progress-history">
+        <div class="eyebrow">History</div>
+        ${progressUpdates.slice().reverse().map((p) => `
+          <div class="progress-history-row" data-progress-id="${p.id}">
+            <span>${formatDate(p.date, 'short')}</span>
+            <span>${p.currentPage != null ? 'page ' + p.currentPage : ''}${p.percent != null ? ' · ' + p.percent + '%' : ''}</span>
+            <button class="remove-btn" data-remove-progress="${p.id}">Remove</button>
+          </div>`).join('')}
+      </div>` : ''}`;
+  }
+
+  function sessionsBlockHTML() {
+    return `
+      <hr class="divider">
+      <div class="subsection-label">Sessions <span class="text-muted" style="font-weight:400;text-transform:none;letter-spacing:0;">— optional</span></div>
+      ${sessions.length ? sessions.slice().reverse().map((s) => `
+        <div class="session-row" data-session-id="${s.id}">
+          <span>${formatDate(s.date, 'short')}</span>
+          <span class="session-pages">${s.pagesStarted != null && s.pagesEnded != null ? `p. ${s.pagesStarted}–${s.pagesEnded}` : ''}</span>
+          <span class="session-minutes">${s.minutes ? s.minutes + ' min' : ''}</span>
+          <button class="remove-btn" data-remove-session="${s.id}" style="opacity:0.5;">✕</button>
+        </div>`).join('') : ''}
+      <div class="add-inline-form">
+        <div class="field"><label>Date</label><input type="date" class="input" id="session-date" value="${todayStr()}" style="width:150px;"></div>
+        <div class="field"><label>Page from</label><input type="number" class="input" id="session-page-start" style="width:100px;"></div>
+        <div class="field"><label>Page to</label><input type="number" class="input" id="session-page-end" style="width:100px;"></div>
+        <div class="field"><label>Minutes</label><input type="number" class="input" id="session-minutes" style="width:100px;"></div>
+        <button class="btn btn-sm" id="add-session-btn">+ Add Session</button>
       </div>`;
   }
 
-  function reviewSectionHTML() {
+  function ratingReviewSectionHTML() {
     return `
       <div class="book-section">
-        <h2>My Review</h2>
-        <textarea class="textarea" id="review-textarea" placeholder="What did you think?" style="min-height:130px;">${escapeHtml(entry.review || '')}</textarea>
-      </div>`;
-  }
-
-  function notesSectionHTML() {
-    return `
-      <div class="book-section">
-        <h2>Private Notes</h2>
-        <textarea class="textarea" id="notes-textarea" placeholder="Notes just for you — never shown anywhere else." style="min-height:100px;">${escapeHtml(entry.privateNotes || '')}</textarea>
+        <h2>Rating &amp; Review</h2>
+        <div id="rating-input-mount" style="margin-bottom:18px;"></div>
+        <textarea class="textarea" id="review-textarea" placeholder="What did you think?" style="min-height:130px;">${escapeHtml(staged.review)}</textarea>
       </div>`;
   }
 
@@ -218,16 +252,45 @@
     return `
       <div class="book-section">
         <h2>Favourite Quotes</h2>
-        ${quotes.map((q) => `
-          <div class="quote-card" data-quote-id="${q.id}">
-            <button class="remove-btn" data-remove-quote="${q.id}">Remove</button>
-            "${escapeHtml(q.text)}"
-            ${q.pageNumber ? `<div class="quote-page">p. ${q.pageNumber}</div>` : ''}
-          </div>`).join('')}
-        <div class="add-inline-form">
-          <div class="field" style="flex:1;min-width:220px;"><label>Quote</label><input class="input" id="quote-text-input" placeholder="Type or paste a quote…"></div>
-          <div class="field"><label>Page</label><input type="number" class="input" id="quote-page-input" style="width:90px;"></div>
-          <button class="btn btn-sm" id="add-quote-btn">+ Add Quote</button>
+        <div id="quotes-list">
+          ${quotes.map((q) => quoteItemHTML(q)).join('')}
+        </div>
+        <button type="button" class="btn btn-sm" id="add-quote-toggle-btn">+ Add Quote</button>
+        <div class="add-quote-form" id="add-quote-form" hidden>
+          <textarea class="textarea" id="quote-text-input" placeholder="Type or paste a quote…" style="min-height:70px;"></textarea>
+          <div class="form-row" style="margin-top:8px;">
+            <div class="field" style="max-width:100px;"><label>Page</label><input type="number" class="input" id="quote-page-input"></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button class="btn btn-sm btn-primary" id="save-quote-btn">Save Quote</button>
+            <button class="btn btn-sm btn-ghost" id="cancel-quote-btn">Cancel</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function quoteItemHTML(q) {
+    return `
+      <div class="quote-item" data-quote-id="${q.id}">
+        <p class="quote-text">"${escapeHtml(q.text)}"</p>
+        ${q.pageNumber ? `<div class="quote-page">p. ${q.pageNumber}</div>` : ''}
+        <div class="quote-actions">
+          <button class="link-btn" data-edit-quote="${q.id}">Edit</button>
+          <button class="link-btn" data-delete-quote="${q.id}">Delete</button>
+        </div>
+      </div>`;
+  }
+
+  function quoteEditFormHTML(q) {
+    return `
+      <div class="quote-item editing" data-quote-id="${q.id}">
+        <textarea class="textarea" id="edit-quote-text-${q.id}" style="min-height:70px;">${escapeHtml(q.text)}</textarea>
+        <div class="form-row" style="margin-top:8px;">
+          <div class="field" style="max-width:100px;"><label>Page</label><input type="number" class="input" id="edit-quote-page-${q.id}" value="${q.pageNumber || ''}"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-sm btn-primary" data-save-quote-edit="${q.id}">Save</button>
+          <button class="btn btn-sm btn-ghost" data-cancel-quote-edit="${q.id}">Cancel</button>
         </div>
       </div>`;
   }
@@ -236,11 +299,13 @@
     return `
       <div class="book-section">
         <h2>Tags</h2>
-        <div class="chip-row" id="tag-chip-row">
+        <div class="chip-row">
           ${(entry.tags || []).map((t) => `<span class="chip removable">${escapeHtml(t)}<button data-remove-tag="${escapeHtml(t)}">&times;</button></span>`).join('')}
+          <button type="button" class="chip" id="add-tag-chip">+ Add Tag</button>
         </div>
-        <div class="tag-input-row">
-          <input class="input" id="tag-input" placeholder="Add a tag and press Enter">
+        <div class="inline-reveal-form" id="add-tag-inline" hidden>
+          <input class="input" id="tag-input" placeholder="Tag name" style="max-width:160px;">
+          <button class="btn btn-sm btn-primary" id="confirm-tag-btn">Add</button>
         </div>
       </div>`;
   }
@@ -249,14 +314,13 @@
     return `
       <div class="book-section">
         <h2>Collections</h2>
-        ${allCollections.length ? `<div class="collection-checklist">
-          ${allCollections.map((c) => `
-            <label><input type="checkbox" data-collection-id="${c.id}" ${myCollectionIds.has(c.id) ? 'checked' : ''}> ${escapeHtml(c.name)}</label>
-          `).join('')}
-        </div>` : `<p class="text-muted" style="font-size:13.5px;">No collections yet.</p>`}
-        <div class="add-inline-form">
-          <div class="field"><label>New collection</label><input class="input" id="new-collection-input" placeholder="e.g. Comfort Reads" style="width:200px;"></div>
-          <button class="btn btn-sm" id="add-collection-btn">+ Create</button>
+        <div class="chip-row">
+          ${allCollections.map((c) => `<button type="button" class="chip ${myCollectionIds.has(c.id) ? 'active' : ''}" data-collection-toggle="${c.id}">${myCollectionIds.has(c.id) ? '✓ ' : ''}${escapeHtml(c.name)}</button>`).join('')}
+          <button type="button" class="chip" id="new-collection-chip">+ New Collection</button>
+        </div>
+        <div class="inline-reveal-form" id="new-collection-inline" hidden>
+          <input class="input" id="new-collection-input" placeholder="Collection name" style="max-width:200px;">
+          <button class="btn btn-sm btn-primary" id="confirm-new-collection-btn">Create</button>
         </div>
       </div>`;
   }
@@ -268,35 +332,73 @@
       </div>`;
   }
 
+  function saveBarHTML() {
+    return `
+      <div class="save-bar">
+        <span class="save-bar-hint" id="save-bar-hint">${isDirty() ? 'You have unsaved changes' : 'No changes to save'}</span>
+        <button class="btn btn-primary btn-lg" id="save-changes-btn" ${isDirty() ? '' : 'disabled'}>Save Changes</button>
+      </div>`;
+  }
+
+  // ---------------------------------------------------------
+  // Events
+  // ---------------------------------------------------------
+
+  function syncSaveBar() {
+    const dirty = isDirty();
+    root.querySelector('#save-changes-btn').disabled = !dirty;
+    root.querySelector('#save-bar-hint').textContent = dirty ? 'You have unsaved changes' : 'No changes to save';
+  }
+
   function wireEvents() {
     mountStarInput(root.querySelector('#rating-input-mount'), {
-      value: entry.rating || 0,
-      onChange: async (v) => { await updateEntry({ rating: v }); },
+      value: staged.rating,
+      onChange: (v) => { staged.rating = v; syncSaveBar(); },
     });
 
     root.querySelector('#status-select').addEventListener('change', async (e) => {
       const newStatus = e.target.value;
+      let patch = { status: newStatus };
+      if (isDirty()) {
+        patch = {
+          format: staged.format, dateStarted: staged.dateStarted || null,
+          dateFinished: staged.dateFinished || null, rating: staged.rating || null,
+          review: staged.review, ...patch,
+        };
+      }
       if (newStatus === 'finished') {
         const rating = await promptFinishedRating(book);
-        const patch = { status: newStatus };
         if (rating) patch.rating = rating;
-        await updateEntry(patch);
-      } else {
-        await updateEntry({ status: newStatus });
       }
+      await updateEntry(patch);
       await refresh();
       toast(`Marked as ${STATUS_LABELS[newStatus]}`);
     });
 
-    root.querySelector('#format-select').addEventListener('change', async (e) => {
-      await updateEntry({ format: e.target.value });
+    root.querySelector('#format-select').addEventListener('change', (e) => { staged.format = e.target.value; syncSaveBar(); });
+    root.querySelector('#date-started').addEventListener('change', (e) => { staged.dateStarted = e.target.value; syncSaveBar(); });
+    root.querySelector('#date-finished').addEventListener('change', (e) => { staged.dateFinished = e.target.value; syncSaveBar(); });
+    root.querySelector('#review-textarea').addEventListener('input', (e) => { staged.review = e.target.value; syncSaveBar(); });
+
+    root.querySelectorAll('[data-today-for]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const input = root.querySelector(`#${btn.dataset.todayFor}`);
+        input.value = todayStr();
+        input.dispatchEvent(new Event('change'));
+      });
     });
 
-    root.querySelector('#date-started').addEventListener('change', async (e) => {
-      await updateEntry({ dateStarted: e.target.value || null });
-    });
-    root.querySelector('#date-finished').addEventListener('change', async (e) => {
-      await updateEntry({ dateFinished: e.target.value || null });
+    root.querySelector('#save-changes-btn').addEventListener('click', async () => {
+      await updateEntry({
+        format: staged.format,
+        dateStarted: staged.dateStarted || null,
+        dateFinished: staged.dateFinished || null,
+        rating: staged.rating || null,
+        review: staged.review,
+      });
+      baseline = { ...staged };
+      syncSaveBar();
+      toast('Changes saved');
     });
 
     const descToggle = root.querySelector('#description-toggle');
@@ -361,37 +463,68 @@
       btn.addEventListener('click', async () => { await Storage.ReadingSessions.remove(btn.dataset.removeSession); await refresh(); });
     });
 
-    root.querySelector('#review-textarea').addEventListener('blur', async (e) => {
-      await updateEntry({ review: e.target.value });
-      toast('Review saved');
+    // ---- quotes ----
+    const addQuoteToggle = root.querySelector('#add-quote-toggle-btn');
+    const addQuoteForm = root.querySelector('#add-quote-form');
+    addQuoteToggle.addEventListener('click', () => {
+      addQuoteForm.hidden = false;
+      addQuoteToggle.hidden = true;
+      root.querySelector('#quote-text-input').focus();
     });
-    root.querySelector('#notes-textarea').addEventListener('blur', async (e) => {
-      await updateEntry({ privateNotes: e.target.value });
-      toast('Notes saved');
+    root.querySelector('#cancel-quote-btn').addEventListener('click', () => {
+      addQuoteForm.hidden = true;
+      addQuoteToggle.hidden = false;
     });
-
-    root.querySelector('#add-quote-btn').addEventListener('click', async () => {
+    root.querySelector('#save-quote-btn').addEventListener('click', async () => {
       const text = root.querySelector('#quote-text-input').value.trim();
       if (!text) return;
       const pageNumber = root.querySelector('#quote-page-input').value;
       await Storage.Quotes.add(entry.id, { text, pageNumber: pageNumber ? Number(pageNumber) : null });
       await refresh();
     });
-    root.querySelectorAll('[data-remove-quote]').forEach((btn) => {
-      btn.addEventListener('click', async () => { await Storage.Quotes.remove(btn.dataset.removeQuote); await refresh(); });
+    root.querySelectorAll('[data-delete-quote]').forEach((btn) => {
+      btn.addEventListener('click', async () => { await Storage.Quotes.remove(btn.dataset.deleteQuote); await refresh(); });
+    });
+    root.querySelectorAll('[data-edit-quote]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.editQuote;
+        const q = quotes.find((x) => x.id === id);
+        const item = root.querySelector(`.quote-item[data-quote-id="${id}"]`);
+        item.outerHTML = quoteEditFormHTML(q);
+        wireQuoteEditForm(id);
+      });
     });
 
-    const tagInput = root.querySelector('#tag-input');
-    tagInput.addEventListener('keydown', async (e) => {
-      if (e.key !== 'Enter') return;
-      e.preventDefault();
+    function wireQuoteEditForm(id) {
+      root.querySelector(`[data-save-quote-edit="${id}"]`).addEventListener('click', async () => {
+        const text = root.querySelector(`#edit-quote-text-${id}`).value.trim();
+        if (!text) return;
+        const pageNumber = root.querySelector(`#edit-quote-page-${id}`).value;
+        await Storage.Quotes.update(id, { text, pageNumber: pageNumber ? Number(pageNumber) : null });
+        await refresh();
+      });
+      root.querySelector(`[data-cancel-quote-edit="${id}"]`).addEventListener('click', () => refresh());
+    }
+
+    // ---- tags ----
+    const addTagChip = root.querySelector('#add-tag-chip');
+    const addTagInline = root.querySelector('#add-tag-inline');
+    addTagChip.addEventListener('click', () => {
+      addTagInline.hidden = false;
+      addTagChip.hidden = true;
+      root.querySelector('#tag-input').focus();
+    });
+    async function commitTag() {
+      const tagInput = root.querySelector('#tag-input');
       const val = tagInput.value.trim();
       if (!val) return;
       const tags = new Set(entry.tags || []);
       tags.add(val);
       await updateEntry({ tags: [...tags] });
       await refresh();
-    });
+    }
+    root.querySelector('#confirm-tag-btn').addEventListener('click', commitTag);
+    root.querySelector('#tag-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); commitTag(); } });
     root.querySelectorAll('[data-remove-tag]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const tags = (entry.tags || []).filter((t) => t !== btn.dataset.removeTag);
@@ -400,14 +533,25 @@
       });
     });
 
-    root.querySelectorAll('[data-collection-id]').forEach((cb) => {
-      cb.addEventListener('change', async () => {
-        if (cb.checked) await Storage.Collections.addBook(cb.dataset.collectionId, entry.id);
-        else await Storage.Collections.removeBook(cb.dataset.collectionId, entry.id);
-        toast(cb.checked ? 'Added to collection' : 'Removed from collection');
+    // ---- collections ----
+    root.querySelectorAll('[data-collection-toggle]').forEach((chip) => {
+      chip.addEventListener('click', async () => {
+        const id = chip.dataset.collectionToggle;
+        const active = chip.classList.contains('active');
+        if (active) await Storage.Collections.removeBook(id, entry.id);
+        else await Storage.Collections.addBook(id, entry.id);
+        toast(active ? 'Removed from collection' : 'Added to collection');
+        await refresh();
       });
     });
-    root.querySelector('#add-collection-btn').addEventListener('click', async () => {
+    const newCollectionChip = root.querySelector('#new-collection-chip');
+    const newCollectionInline = root.querySelector('#new-collection-inline');
+    newCollectionChip.addEventListener('click', () => {
+      newCollectionInline.hidden = false;
+      newCollectionChip.hidden = true;
+      root.querySelector('#new-collection-input').focus();
+    });
+    async function commitNewCollection() {
       const input = root.querySelector('#new-collection-input');
       const name = input.value.trim();
       if (!name) return;
@@ -415,7 +559,9 @@
       await Storage.Collections.addBook(c.id, entry.id);
       await refresh();
       toast(`Created "${name}"`);
-    });
+    }
+    root.querySelector('#confirm-new-collection-btn').addEventListener('click', commitNewCollection);
+    root.querySelector('#new-collection-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); commitNewCollection(); } });
 
     root.querySelector('#remove-book-btn').addEventListener('click', async () => {
       if (!confirm(`Remove "${book.title}" from your library? This deletes all your reading data for this book.`)) return;

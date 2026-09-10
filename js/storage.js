@@ -279,6 +279,13 @@ const Storage = (() => {
       return record;
     },
     listFor: (readingEntryId) => getAllByIndex('quotes', 'readingEntryId', readingEntryId),
+    async update(id, patch) {
+      const existing = await get('quotes', id);
+      if (!existing) return null;
+      const updated = { ...existing, ...patch };
+      await put('quotes', updated);
+      return updated;
+    },
     remove: (id) => remove('quotes', id),
   };
 
