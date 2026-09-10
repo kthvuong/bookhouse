@@ -44,36 +44,48 @@
   }
   renderGoalHistory();
 
-  // ---- password lock ----
+  // ---- PIN lock ----
   async function sha256Hex(str) {
     const enc = new TextEncoder().encode(str);
     const buf = await crypto.subtle.digest('SHA-256', enc);
     return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
   }
 
-  document.getElementById('set-password-btn').addEventListener('click', async () => {
-    const pw1 = document.getElementById('new-password').value;
-    const pw2 = document.getElementById('confirm-password').value;
-    if (!pw1 || pw1.length < 4) { toast('Choose at least 4 characters'); return; }
-    if (pw1 !== pw2) { toast("Passwords don't match"); return; }
-    localStorage.setItem('mg_pw_hash', await sha256Hex(pw1));
-    localStorage.setItem('mg_authed', '1');
-    document.getElementById('new-password').value = '';
-    document.getElementById('confirm-password').value = '';
-    toast('Password set');
+  const pinHint = document.getElementById('pin-set-hint');
+  pinHint.textContent = localStorage.getItem('mg_pw_hash') ? 'A PIN is currently set on this device.' : 'No PIN set on this device yet.';
+
+  const newPin = mountPinInput(document.getElementById('new-pin-row'), {
+    onComplete: () => confirmPin.focus(),
+  });
+  const confirmPin = mountPinInput(document.getElementById('confirm-pin-row'), {
+    onComplete: async (confirmValue) => {
+      if (newPin.value() !== confirmValue) {
+        toast("PINs don't match");
+        newPin.shake(); confirmPin.shake();
+        newPin.clear(); confirmPin.clear();
+        newPin.focus();
+        return;
+      }
+      localStorage.setItem('mg_pw_hash', await sha256Hex(newPin.value()));
+      localStorage.setItem('mg_authed', '1');
+      newPin.clear(); confirmPin.clear();
+      pinHint.textContent = 'A PIN is currently set on this device.';
+      toast('PIN set');
+    },
   });
 
   document.getElementById('lock-now-btn').addEventListener('click', () => {
-    if (!localStorage.getItem('mg_pw_hash')) { toast('Set a password first'); return; }
+    if (!localStorage.getItem('mg_pw_hash')) { toast('Set a PIN first'); return; }
     localStorage.removeItem('mg_authed');
     window.location.href = 'index.html';
   });
 
   document.getElementById('remove-password-btn').addEventListener('click', () => {
-    if (!confirm('Remove password protection? Anyone with a link to this app will be able to open it.')) return;
+    if (!confirm('Remove PIN protection? Anyone with a link to this app will be able to open it.')) return;
     localStorage.removeItem('mg_pw_hash');
     localStorage.removeItem('mg_authed');
-    toast('Password protection removed');
+    pinHint.textContent = 'No PIN set on this device yet.';
+    toast('PIN protection removed');
   });
 
   // ---- theme ----

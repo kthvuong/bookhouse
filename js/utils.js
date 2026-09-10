@@ -45,6 +45,48 @@ function ratingText(rating) {
  * Renders an interactive half-star input into `container`.
  * opts: { value, size ('sm'|''|'lg'), onChange(value) }
  */
+/**
+ * Renders `length` single-digit boxes (a PIN-entry pattern) into `container`.
+ * Auto-advances focus as digits are typed, auto-backspaces across boxes,
+ * supports pasting a full code, and calls onComplete(value) as soon as
+ * every box is filled. Returns { clear, shake, focus, value }.
+ */
+function mountPinInput(container, { length = 4, onComplete } = {}) {
+  container.innerHTML = Array.from({ length }).map((_, i) =>
+    `<input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-pin-index="${i}" autocomplete="one-time-code">`
+  ).join('');
+  const inputs = [...container.querySelectorAll('.pin-box')];
+
+  function value() { return inputs.map((i) => i.value).join(''); }
+  function clear() { inputs.forEach((i) => (i.value = '')); inputs[0].focus(); }
+  function focus() { inputs[0].focus(); }
+  function shake() {
+    container.classList.add('pin-shake');
+    setTimeout(() => container.classList.remove('pin-shake'), 400);
+  }
+
+  inputs.forEach((input, idx) => {
+    input.addEventListener('input', () => {
+      input.value = input.value.replace(/[^0-9]/g, '').slice(0, 1);
+      if (input.value && idx < inputs.length - 1) inputs[idx + 1].focus();
+      if (value().length === length) onComplete && onComplete(value());
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !input.value && idx > 0) inputs[idx - 1].focus();
+    });
+    input.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = ((e.clipboardData && e.clipboardData.getData('text')) || '').replace(/[^0-9]/g, '').slice(0, length);
+      text.split('').forEach((ch, i) => { if (inputs[i]) inputs[i].value = ch; });
+      const last = Math.min(text.length, length) - 1;
+      if (last >= 0) inputs[last].focus();
+      if (text.length === length) onComplete && onComplete(text);
+    });
+  });
+
+  return { clear, shake, focus, value };
+}
+
 function mountStarInput(container, opts) {
   let value = opts.value || 0;
   const size = opts.size || 'lg';

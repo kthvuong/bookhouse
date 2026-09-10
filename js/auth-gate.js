@@ -1,5 +1,5 @@
 /* ============================================================
-   auth-gate.js — a lightweight client-side password lock.
+   auth-gate.js — a lightweight client-side 4-digit PIN lock.
 
    This is a deterrent for casual visitors to a hosted URL, not
    real security: the check happens entirely in the browser, so
@@ -7,6 +7,11 @@
    a personal reading journal from being browsable by strangers
    who stumble on the link, nothing stronger. Reading data itself
    lives in IndexedDB and is untouched by anything here.
+
+   Note: the PIN hash is stored in this browser's localStorage,
+   which is scoped per-origin — a different URL, port, or opening
+   the file directly (file://) is a different origin with its own
+   separate storage, so it will ask you to set a PIN again there.
    ============================================================ */
 
 (function () {
@@ -24,13 +29,13 @@
         <div class="auth-gate-mark">&#9679;</div>
         <h1 class="serif">${APP_NAME}</h1>
         ${mode === 'setup'
-          ? `<p>Set a password to lock this journal to just you.</p>
-             <input type="password" id="auth-pw1" class="input" placeholder="Choose a password" autocomplete="new-password">
-             <input type="password" id="auth-pw2" class="input" placeholder="Confirm password" autocomplete="new-password" style="margin-top:10px;">
-             <button class="btn btn-primary" id="auth-submit" style="margin-top:16px;width:100%;">Set Password &amp; Enter</button>`
+          ? `<p>Set a 4-digit PIN to lock this journal to just you.</p>
+             <div class="eyebrow" style="margin-top:16px;">Enter PIN</div>
+             <div class="pin-input-row" id="pin-row-1" style="margin-top:8px;"></div>
+             <div class="eyebrow" style="margin-top:16px;">Confirm PIN</div>
+             <div class="pin-input-row" id="pin-row-2" style="margin-top:8px;"></div>`
           : `<p>This is a private reading journal.</p>
-             <input type="password" id="auth-pw1" class="input" placeholder="Password" autocomplete="current-password">
-             <button class="btn btn-primary" id="auth-submit" style="margin-top:16px;width:100%;">Unlock</button>`
+             <div class="pin-input-row" id="pin-row-1" style="margin-top:16px;"></div>`
         }
         <p class="auth-gate-error" id="auth-error" hidden></p>
       </div>`;
@@ -51,37 +56,47 @@
     const storedHash = localStorage.getItem('mg_pw_hash');
     const mode = storedHash ? 'locked' : 'setup';
     const overlay = buildOverlay(mode);
-    const pw1 = overlay.querySelector('#auth-pw1');
-    const pw2 = overlay.querySelector('#auth-pw2');
     const err = overlay.querySelector('#auth-error');
-    const submit = overlay.querySelector('#auth-submit');
-
-    pw1.focus();
 
     function showError(msg) {
       err.textContent = msg;
       err.hidden = false;
     }
 
-    async function handleSubmit() {
-      if (mode === 'setup') {
-        if (!pw1.value || pw1.value.length < 4) { showError('Choose at least 4 characters.'); return; }
-        if (pw1.value !== pw2.value) { showError("Passwords don't match."); return; }
-        localStorage.setItem('mg_pw_hash', await sha256Hex(pw1.value));
-        unlock();
-      } else {
-        if ((await sha256Hex(pw1.value)) === storedHash) {
+    if (mode === 'setup') {
+      const row2 = overlay.querySelector('#pin-row-2');
+      const pin1 = mountPinInput(overlay.querySelector('#pin-row-1'), {
+        onComplete: () => pin2.focus(),
+      });
+      const pin2 = mountPinInput(row2, {
+        onComplete: async (confirmValue) => {
+          if (pin1.value() !== confirmValue) {
+            showError("PINs don't match — try again.");
+            pin1.shake(); pin2.shake();
+            pin1.clear(); pin2.clear();
+            pin1.focus();
+            return;
+          }
+          err.hidden = true;
+          localStorage.setItem('mg_pw_hash', await sha256Hex(pin1.value()));
           unlock();
-        } else {
-          showError("That password doesn't match.");
-          pw1.value = '';
-          pw1.focus();
-        }
-      }
+        },
+      });
+      pin1.focus();
+    } else {
+      const pin = mountPinInput(overlay.querySelector('#pin-row-1'), {
+        onComplete: async (value) => {
+          if ((await sha256Hex(value)) === storedHash) {
+            unlock();
+          } else {
+            showError("That PIN doesn't match.");
+            pin.shake();
+            pin.clear();
+          }
+        },
+      });
+      pin.focus();
     }
-
-    submit.addEventListener('click', handleSubmit);
-    [pw1, pw2].forEach((el) => el && el.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSubmit(); }));
   }
 
   if (document.readyState === 'loading') {

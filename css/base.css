@@ -187,5 +187,26 @@ html[data-locked] body { visibility: hidden; }
 .auth-gate-card .input { text-align: center; }
 .auth-gate-error { color: var(--danger); font-size: 12.5px; margin-top: 12px; }
 
+.pin-input-row { display: flex; gap: 10px; justify-content: center; }
+.pin-box {
+  width: 46px; height: 54px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-primary);
+}
+.pin-box:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+@keyframes pin-shake-kf {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-8px); }
+  40%, 60% { transform: translateX(8px); }
+}
+.pin-shake { animation: pin-shake-kf 0.4s; }
+
 .text-muted { color: var(--text-muted); }
 .text-secondary { color: var(--text-secondary); }

@@ -93,6 +93,7 @@ function initHeader(activeKey) {
       </div>
     </header>
     ${renderMobileTabBar(activeKey)}
+    <button class="btn-fab" id="add-book-fab" aria-label="Add Book">${ICONS.plus}</button>
   `;
 
   document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
@@ -103,6 +104,10 @@ function initHeader(activeKey) {
     if (searchBox.classList.contains('mobile-open')) {
       document.getElementById('global-search-input').focus();
     }
+  });
+
+  document.getElementById('add-book-fab').addEventListener('click', () => {
+    AddBookFlow.open();
   });
 
   document.getElementById('add-book-btn').addEventListener('click', () => {

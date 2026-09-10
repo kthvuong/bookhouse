@@ -65,6 +65,10 @@
   display: none;
 }
 
+.btn-fab {
+  display: none;
+}
+
 .page-shell {
   max-width: var(--max-width);
   margin: 0 auto;
@@ -189,6 +193,25 @@
   .mobile-tab-bar .tab-item.active { color: var(--accent-strong); }
 
   body { padding-bottom: var(--mobile-tabbar-height); }
+
+  /* iOS Safari auto-zooms the page when focusing any text input/select
+     smaller than 16px — this stops that (and the "cuts off the page"
+     effect that comes with it) across every form control in the app. */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  #add-book-btn { display: none; }
+  .btn-fab {
+    display: flex; align-items: center; justify-content: center;
+    position: fixed; right: 18px; bottom: calc(var(--mobile-tabbar-height) + 16px);
+    z-index: 85;
+    width: 54px; height: 54px; border-radius: 50%;
+    background: var(--accent); color: #fff9f2; border: none; cursor: pointer;
+    box-shadow: var(--shadow-lg);
+  }
+  .btn-fab:active { transform: scale(0.94); }
+  .btn-fab svg { width: 24px; height: 24px; }
 }
 
 @media (max-width: 640px) {
@@ -208,8 +231,6 @@
     z-index: 55;
   }
   .search-box.mobile-open input { flex: 1; min-width: 0; }
-  #add-book-btn span { display: none; }
-  #add-book-btn { padding: 9px 10px; }
 }
 
 @media (max-width: 560px) {
