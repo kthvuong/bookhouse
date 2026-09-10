@@ -43,7 +43,7 @@
   }
 
   // ---- This month ----
-  document.getElementById('this-month-heading').textContent = `${MONTH_NAMES[thisMonth]}`;
+  document.getElementById('this-month-heading').textContent = `${MONTH_NAMES[thisMonth]} Reads`;
   const monthRail = document.getElementById('this-month-rail');
   if (!finishedThisMonth.length) {
     monthRail.innerHTML = emptyState('🗓️', 'No finishes yet this month', 'Books you complete this month will collect here.');
