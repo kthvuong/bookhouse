@@ -6,3 +6,9 @@
   for = "/*"
   [headers.values]
     X-Frame-Options = "DENY"
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache"

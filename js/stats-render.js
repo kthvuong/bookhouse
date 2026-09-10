@@ -154,6 +154,81 @@ async function highestRatedSectionHTML(stats) {
     </section>`;
 }
 
+/* ---------------------------------------------------------
+   Reading Personality — a fun, rule-based "reading horoscope."
+   No AI call here (this app has no backend to make one from) —
+   just a genre-driven archetype plus a few stat-driven traits,
+   picked deterministically from your own data.
+   --------------------------------------------------------- */
+const GENRE_ARCHETYPES = [
+  { key: 'fantasy', match: ['fantasy', 'wizard', 'dragon', 'sword and sorcery'], title: 'The Fantasy Wanderer', emoji: '🗡️', blurb: "You're drawn to invented worlds, ancient magic, and heroes who don't know their own power yet." },
+  { key: 'scifi', match: ['science fiction', 'sci-fi', 'dystopia', 'space opera'], title: 'The Star Charter', emoji: '🚀', blurb: "You'd rather orbit a strange new world than stay grounded in this one." },
+  { key: 'mythology', match: ['mytholog', 'gods', 'retelling', 'legend'], title: 'The Myth Keeper', emoji: '🏺', blurb: "You're drawn to old stories retold — gods, monsters, and the humans caught between them." },
+  { key: 'romance', match: ['romance', 'love stor'], title: 'The Hopeless Romantic', emoji: '💌', blurb: "You're here for the longing glances, the slow burn, and the happily ever after." },
+  { key: 'mystery', match: ['mystery', 'thriller', 'crime', 'detective', 'suspense'], title: 'The Detective', emoji: '🔍', blurb: "You can't resist a good puzzle — you're already three suspects ahead of everyone else." },
+  { key: 'horror', match: ['horror', 'ghost stor', 'supernatural'], title: 'The Thrill Seeker', emoji: '🕯️', blurb: 'Nothing like a little dread before bed — you read with the lights on, just in case.' },
+  { key: 'historical', match: ['historical fiction', 'history'], title: 'The Time Traveler', emoji: '🕰️', blurb: "You're happiest a few centuries away from the present, learning how people actually lived." },
+  { key: 'nonfiction', match: ['biography', 'memoir', 'autobiograph', 'nonfiction', 'essay'], title: 'The Truth Seeker', emoji: '📖', blurb: "You'd rather read someone's real life than anyone's invented one." },
+  { key: 'classics', match: ['classic'], title: 'The Classicist', emoji: '🏛️', blurb: 'You like your stories tested by time.' },
+  { key: 'ya', match: ['young adult', 'coming of age'], title: 'The Eternal Teenager', emoji: '🌙', blurb: 'You never stopped loving a good coming-of-age story.' },
+  { key: 'poetry', match: ['poetry', 'poems'], title: 'The Dreamer', emoji: '🌸', blurb: 'You read in fragments and feelings.' },
+  { key: 'literary', match: ['literary fiction', 'literature'], title: 'The Literary Wanderer', emoji: '🖋️', blurb: 'You read for the sentences as much as the story.' },
+];
+const FALLBACK_ARCHETYPE = { title: 'The Genre Wanderer', emoji: '🧭', blurb: "You don't belong to just one shelf — you read wherever the mood takes you." };
+
+function deriveArchetype(stats) {
+  const buckets = {};
+  stats.finished.forEach((e) => {
+    const genres = (e.book.genres || []).map((g) => g.toLowerCase());
+    const matchedKeys = new Set();
+    genres.forEach((g) => {
+      GENRE_ARCHETYPES.forEach((arc) => {
+        if (!matchedKeys.has(arc.key) && arc.match.some((kw) => g.includes(kw))) matchedKeys.add(arc.key);
+      });
+    });
+    matchedKeys.forEach((key) => { buckets[key] = (buckets[key] || 0) + 1; });
+  });
+  const sorted = Object.entries(buckets).sort((a, b) => b[1] - a[1]);
+  if (!sorted.length) return FALLBACK_ARCHETYPE;
+  return GENRE_ARCHETYPES.find((a) => a.key === sorted[0][0]) || FALLBACK_ARCHETYPE;
+}
+
+function deriveTraits(stats) {
+  const traits = [];
+  if (stats.avgRating != null) {
+    if (stats.avgRating >= 4.3) traits.push("You're a generous rater — most of what you read earns four stars or more.");
+    else if (stats.avgRating <= 3.2) traits.push("You're a tough critic — a book has to work to impress you.");
+  }
+  if (stats.pagesPerDay) {
+    if (stats.pagesPerDay >= 25) traits.push('You devour books at a serious pace.');
+    else if (stats.pagesPerDay <= 6) traits.push("You're a savorer, taking your time with every page.");
+  }
+  if (stats.mostReadAuthor && stats.mostReadAuthor[1] >= 2) {
+    traits.push(`You keep returning to ${stats.mostReadAuthor[0]} like an old friend.`);
+  }
+  const formats = Object.entries(stats.formatCounts).filter(([, c]) => c > 0).sort((a, b) => b[1] - a[1]);
+  if (formats.length && formats[0][1] >= Math.ceil(stats.booksFinished * 0.6)) {
+    const label = { physical: 'Physical books are your comfort zone.', ebook: "You're rarely without your eReader.", audiobook: 'Audiobooks are basically part of your routine.' }[formats[0][0]];
+    if (label) traits.push(label);
+  }
+  if (stats.dnfCount >= 2) traits.push("You have no patience for a book that isn't working — and that's a good thing.");
+  return traits.slice(0, 3);
+}
+
+function personalitySectionHTML(stats) {
+  if (!stats.booksFinished) return '';
+  const archetype = deriveArchetype(stats);
+  const traits = deriveTraits(stats);
+  return `
+    <section class="personality-section fade-in">
+      <div class="eyebrow">Your Reading Personality</div>
+      <div class="personality-emoji">${archetype.emoji}</div>
+      <h2 class="personality-title serif">${archetype.title}</h2>
+      <p class="personality-blurb">${archetype.blurb}</p>
+      ${traits.length ? `<div class="personality-traits">${traits.map((t) => `<p class="trait-line">${escapeHtml(t)}</p>`).join('')}</div>` : ''}
+    </section>`;
+}
+
 function insightsSectionHTML(insights) {
   if (!insights.length) return '';
   return `

@@ -6,7 +6,7 @@
   initHeader('wrapped');
 
   const entries = (await Storage.ReadingEntries.allWithBooks()).filter((e) => e.book);
-  const finishedYears = [...new Set(entries.filter((e) => e.status === 'finished' && e.dateFinished).map((e) => new Date(e.dateFinished + 'T00:00:00').getFullYear()))].sort((a, b) => b - a);
+  const finishedYears = [...new Set(entries.filter((e) => e.status === 'finished' && e.dateFinished).map((e) => new Date(`${normalizeDateStr(e.dateFinished)}T00:00:00`).getFullYear()))].sort((a, b) => b - a);
 
   const existingWrapped = await Storage.Wrapped.getAll();
   const existingYears = new Set(existingWrapped.map((w) => w.year));

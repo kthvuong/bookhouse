@@ -189,6 +189,13 @@
 .date-with-today .input { flex: 1; min-width: 0; }
 .date-with-today .btn { flex-shrink: 0; padding: 10px 12px; }
 
+.partial-date-field { display: flex; gap: 6px; flex-wrap: wrap; }
+.partial-date-field select.input { flex: 1.4; min-width: 92px; cursor: pointer; }
+.partial-date-field input[type="number"] { min-width: 0; -moz-appearance: textfield; }
+.partial-date-field input[id$="-day"] { flex: 0.8; min-width: 56px; }
+.partial-date-field input[id$="-year"] { flex: 1; min-width: 68px; }
+.partial-date-field .btn { flex-shrink: 0; padding: 10px 12px; }
+
 .more-details-toggle {
   display: flex; align-items: center; gap: 5px;
   background: none; border: none; cursor: pointer; padding: 8px 0;

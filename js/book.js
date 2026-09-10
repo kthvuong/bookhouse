@@ -148,22 +148,11 @@
           </div>
         </div>
 
-        <div class="control-row">
-          <div class="field-inline">
-            <label class="mini">Started</label>
-            <div class="date-with-today">
-              <input type="date" class="input" id="date-started" value="${staged.dateStarted}" style="width:150px;">
-              <button type="button" class="btn btn-ghost btn-sm" data-today-for="date-started">Today</button>
-            </div>
-          </div>
-          <div class="field-inline">
-            <label class="mini">Finished</label>
-            <div class="date-with-today">
-              <input type="date" class="input" id="date-finished" value="${staged.dateFinished}" style="width:150px;">
-              <button type="button" class="btn btn-ghost btn-sm" data-today-for="date-finished">Today</button>
-            </div>
-          </div>
+        <div class="form-row">
+          ${partialDateFieldHTML('date-started', 'Started', staged.dateStarted)}
+          ${partialDateFieldHTML('date-finished', 'Finished', staged.dateFinished)}
         </div>
+        <p class="text-muted" style="font-size:12px;margin-top:6px;">Don't remember the exact day? Leave Day blank to log just the month and year.</p>
 
         ${progressBlockHTML()}
         ${sessionsBlockHTML()}
@@ -376,17 +365,10 @@
     });
 
     root.querySelector('#format-select').addEventListener('change', (e) => { staged.format = e.target.value; syncSaveBar(); });
-    root.querySelector('#date-started').addEventListener('change', (e) => { staged.dateStarted = e.target.value; syncSaveBar(); });
-    root.querySelector('#date-finished').addEventListener('change', (e) => { staged.dateFinished = e.target.value; syncSaveBar(); });
     root.querySelector('#review-textarea').addEventListener('input', (e) => { staged.review = e.target.value; syncSaveBar(); });
 
-    root.querySelectorAll('[data-today-for]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const input = root.querySelector(`#${btn.dataset.todayFor}`);
-        input.value = todayStr();
-        input.dispatchEvent(new Event('change'));
-      });
-    });
+    wirePartialDateField(root, 'date-started', (val) => { staged.dateStarted = val; syncSaveBar(); });
+    wirePartialDateField(root, 'date-finished', (val) => { staged.dateFinished = val; syncSaveBar(); });
 
     root.querySelector('#save-changes-btn').addEventListener('click', async () => {
       await updateEntry({

@@ -18,7 +18,7 @@
 
   function finishedInMonth(m) {
     return entries.filter((e) => e.status === 'finished' && e.dateFinished && (() => {
-      const d = new Date(e.dateFinished + 'T00:00:00');
+      const d = new Date(`${normalizeDateStr(e.dateFinished)}T00:00:00`);
       return d.getFullYear() === year && d.getMonth() === m;
     })());
   }

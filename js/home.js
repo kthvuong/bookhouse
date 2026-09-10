@@ -1,6 +1,6 @@
 /* ============================================================
-   home.js — dashboard: currently reading, goal, recent, up next,
-   this month, and a few quiet stats.
+   home.js — dashboard: currently reading, goal, this month,
+   up next, and a few quiet stats.
    ============================================================ */
 
 (async function () {
@@ -21,10 +21,8 @@
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
   const finished = entries.filter((e) => e.status === 'finished' && e.book && e.dateFinished);
-  const finishedThisYear = finished.filter((e) => new Date(e.dateFinished + 'T00:00:00').getFullYear() === thisYear);
-  const finishedThisMonth = finishedThisYear.filter((e) => new Date(e.dateFinished + 'T00:00:00').getMonth() === thisMonth);
-
-  const recent = finished.slice().sort((a, b) => b.dateFinished.localeCompare(a.dateFinished)).slice(0, 8);
+  const finishedThisYear = finished.filter((e) => new Date(`${normalizeDateStr(e.dateFinished)}T00:00:00`).getFullYear() === thisYear);
+  const finishedThisMonth = finishedThisYear.filter((e) => new Date(`${normalizeDateStr(e.dateFinished)}T00:00:00`).getMonth() === thisMonth);
 
   const upNext = entries.filter((e) => e.status === 'want_to_read' && e.book)
     .sort((a, b) => {
@@ -51,14 +49,6 @@
     monthRail.innerHTML = emptyState('🗓️', 'No finishes yet this month', 'Books you complete this month will collect here.');
   } else {
     await renderCardList(monthRail, finishedThisMonth.sort((a,b)=>b.dateFinished.localeCompare(a.dateFinished)));
-  }
-
-  // ---- Recent reads ----
-  const recentRail = document.getElementById('recent-rail');
-  if (!recent.length) {
-    recentRail.innerHTML = emptyState('✨', 'No finished books yet', 'Your finished books will show up here.');
-  } else {
-    await renderCardList(recentRail, recent);
   }
 
   // ---- Up next ----

@@ -87,14 +87,76 @@ function mountStarInput(container, opts) {
   return { setValue: (v) => { value = v; render(); } };
 }
 
+/** Reading dates (dateStarted/dateFinished) may be day-precise ("YYYY-MM-DD")
+ *  or, when the exact day isn't known, month-precise ("YYYY-MM"). This pads
+ *  a month-only value to a real date string so Date math never breaks on it. */
+function normalizeDateStr(str) {
+  if (!str) return null;
+  return str.length === 7 ? `${str}-01` : str;
+}
+
 function formatDate(isoOrDateStr, style = 'medium') {
   if (!isoOrDateStr) return '';
-  const d = new Date(isoOrDateStr.length === 10 ? isoOrDateStr + 'T00:00:00' : isoOrDateStr);
+  const monthOnly = isoOrDateStr.length === 7;
+  const d = new Date(monthOnly ? `${isoOrDateStr}-01T00:00:00` : isoOrDateStr.length === 10 ? `${isoOrDateStr}T00:00:00` : isoOrDateStr);
   if (isNaN(d)) return '';
+  if (monthOnly || style === 'monthYear') return `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
   if (style === 'short') return `${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
-  if (style === 'monthYear') return `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
   if (style === 'year') return `${d.getFullYear()}`;
   return `${MONTH_NAMES[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
+/** Splits a possibly-partial date string into parts for the month/day/year fields below. */
+function parseDateParts(value) {
+  if (!value) return { year: '', month: '', day: '' };
+  const [year, month, day] = value.split('-');
+  return { year: year || '', month: month ? String(Number(month)) : '', day: day ? String(Number(day)) : '' };
+}
+
+/** Renders a compact Month / Day (optional) / Year date field with a "Today" shortcut.
+ *  Leaving Day blank stores a month-precision date ("YYYY-MM") instead of a full one. */
+function partialDateFieldHTML(idPrefix, label, value) {
+  const { year, month, day } = parseDateParts(value);
+  return `
+    <div class="field">
+      <label>${label}</label>
+      <div class="partial-date-field">
+        <select class="input" id="${idPrefix}-month">
+          <option value="">Month</option>
+          ${MONTH_NAMES.map((m, i) => `<option value="${i + 1}" ${Number(month) === i + 1 ? 'selected' : ''}>${m}</option>`).join('')}
+        </select>
+        <input type="number" class="input" id="${idPrefix}-day" placeholder="Day" min="1" max="31" value="${escapeHtml(day)}">
+        <input type="number" class="input" id="${idPrefix}-year" placeholder="Year" min="1000" max="9999" value="${escapeHtml(year)}">
+        <button type="button" class="btn btn-ghost btn-sm" data-today-for-partial="${idPrefix}">Today</button>
+      </div>
+    </div>`;
+}
+
+/** Reads a partialDateFieldHTML's three inputs back into '' | 'YYYY-MM' | 'YYYY-MM-DD'. */
+function readPartialDateField(root, idPrefix) {
+  const month = root.querySelector(`#${idPrefix}-month`).value;
+  const day = root.querySelector(`#${idPrefix}-day`).value;
+  const year = root.querySelector(`#${idPrefix}-year`).value;
+  if (!year || !month) return '';
+  const mm = String(month).padStart(2, '0');
+  return day ? `${year}-${mm}-${String(day).padStart(2, '0')}` : `${year}-${mm}`;
+}
+
+/** Wires a partialDateFieldHTML's inputs + Today button; calls onChange with the combined value. */
+function wirePartialDateField(root, idPrefix, onChange) {
+  ['month', 'day', 'year'].forEach((part) => {
+    root.querySelector(`#${idPrefix}-${part}`).addEventListener('change', () => onChange(readPartialDateField(root, idPrefix)));
+  });
+  const todayBtn = root.querySelector(`[data-today-for-partial="${idPrefix}"]`);
+  if (todayBtn) {
+    todayBtn.addEventListener('click', () => {
+      const d = new Date();
+      root.querySelector(`#${idPrefix}-month`).value = d.getMonth() + 1;
+      root.querySelector(`#${idPrefix}-day`).value = d.getDate();
+      root.querySelector(`#${idPrefix}-year`).value = d.getFullYear();
+      onChange(readPartialDateField(root, idPrefix));
+    });
+  }
 }
 
 function todayStr() {

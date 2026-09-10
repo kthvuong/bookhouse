@@ -11,7 +11,7 @@
 
 function inPeriod(dateStr, period) {
   if (!dateStr) return false;
-  const d = new Date(dateStr + 'T00:00:00');
+  const d = new Date(`${normalizeDateStr(dateStr)}T00:00:00`);
   if (period.type === 'allTime') return true;
   if (period.type === 'year') return d.getFullYear() === period.year;
   if (period.type === 'month') return d.getFullYear() === period.year && d.getMonth() === period.month;
@@ -26,7 +26,7 @@ function periodLabel(period) {
 }
 
 function daysBetween(a, b) {
-  return Math.max(1, Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000));
+  return Math.max(1, Math.round((new Date(`${normalizeDateStr(b)}T00:00:00`) - new Date(`${normalizeDateStr(a)}T00:00:00`)) / 86400000));
 }
 
 /**
@@ -74,7 +74,7 @@ function computeStats(allEntries, allSessions, period) {
     booksByMonth = Array(12).fill(0);
     pagesByMonth = Array(12).fill(0);
     finished.forEach((e) => {
-      const d = new Date(e.dateFinished + 'T00:00:00');
+      const d = new Date(`${normalizeDateStr(e.dateFinished)}T00:00:00`);
       if (year != null && d.getFullYear() !== year) return;
       booksByMonth[d.getMonth()]++;
       pagesByMonth[d.getMonth()] += e.book.pageCount || 0;

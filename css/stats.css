@@ -91,6 +91,26 @@
 .insight-line { font-family: var(--font-serif); font-size: 17px; font-style: italic; color: var(--text-secondary); margin-bottom: 10px; }
 .insight-line:last-child { margin-bottom: 0; }
 
+.personality-section {
+  text-align: center;
+  padding: var(--space-7) var(--space-5);
+  margin-bottom: var(--space-8);
+  background: linear-gradient(160deg, var(--accent-tint), var(--bg-elevated));
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+.personality-section .eyebrow { color: var(--accent-strong); }
+.personality-emoji { font-size: 40px; margin-top: 14px; line-height: 1; }
+.personality-title { font-size: clamp(26px, 4vw, 36px); margin-top: 10px; }
+.personality-blurb {
+  max-width: 46ch; margin: 12px auto 0;
+  font-size: 15px; color: var(--text-secondary); line-height: 1.6;
+}
+.personality-traits { max-width: 42ch; margin: 18px auto 0; padding-top: 16px; border-top: 1px solid var(--border); }
+.personality-traits .trait-line { font-size: 13.5px; color: var(--text-secondary); margin-bottom: 8px; }
+.personality-traits .trait-line:last-child { margin-bottom: 0; }
+.personality-traits .trait-line::before { content: '✦ '; color: var(--accent); }
+
 .bookends-row { display: flex; gap: var(--space-7); flex-wrap: wrap; }
 .bookend-title { font-size: 18px; margin-top: 4px; }
 

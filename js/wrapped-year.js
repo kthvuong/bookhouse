@@ -24,11 +24,26 @@
   }
 
   async function generate() {
-    const allEntries = (await Storage.ReadingEntries.allWithBooks()).filter((e) => e.book);
-    const allSessions = await Storage.ReadingSessions.getAll();
-    const stats = computeStats(allEntries, allSessions, { type: 'year', year });
-    await Storage.Wrapped.save(year, { stats: serializeStats(stats), favoriteBookId: null, biggestSurpriseId: null, biggestDisappointmentId: null, bestCoverId: null, couldntStopId: null });
-    render();
+    try {
+      const allEntries = (await Storage.ReadingEntries.allWithBooks()).filter((e) => e.book);
+      const allSessions = await Storage.ReadingSessions.getAll();
+      const stats = computeStats(allEntries, allSessions, { type: 'year', year });
+      await Storage.Wrapped.save(year, { stats: serializeStats(stats), favoriteBookId: null, biggestSurpriseId: null, biggestDisappointmentId: null, bestCoverId: null, couldntStopId: null });
+      render();
+    } catch (err) {
+      console.error('Wrapped generate failed:', err);
+      renderError(err);
+    }
+  }
+
+  function renderError(err) {
+    root.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">⚠️</div>
+        <h3>Something went wrong building this Wrapped</h3>
+        <p>${escapeHtml(err && err.message ? err.message : 'Unknown error')}</p>
+        <p class="text-muted" style="font-size:12.5px;margin-top:8px;">Check the browser console for details, or try Regenerate once the underlying issue is fixed.</p>
+      </div>`;
   }
 
   async function renderGenerateScreen() {
@@ -43,8 +58,25 @@
   }
 
   async function render() {
-    const record = await Storage.Wrapped.get(year);
+    let record;
+    try {
+      record = await Storage.Wrapped.get(year);
+    } catch (err) {
+      console.error('Wrapped load failed:', err);
+      renderError(err);
+      return;
+    }
     if (!record) { await renderGenerateScreen(); return; }
+
+    try {
+      await renderWrapped(record);
+    } catch (err) {
+      console.error('Wrapped render failed:', err);
+      renderError(err);
+    }
+  }
+
+  async function renderWrapped(record) {
     const stats = rehydrateStats(record.stats);
     const insights = generateInsights(stats);
 
@@ -52,6 +84,7 @@
       Promise.resolve(`<div class="wrapped-cover-band fade-in"><div class="eyebrow">${year} Wrapped</div><h1 class="serif">Your year in books</h1></div>`),
       statHeroHTML(stats, { tone: 'final' }),
       Promise.resolve(statCalloutsHTML(stats)),
+      Promise.resolve(personalitySectionHTML(stats)),
       Promise.resolve(monthChartSectionHTML(stats)),
       genreSectionHTML(stats),
       authorSectionHTML(stats),

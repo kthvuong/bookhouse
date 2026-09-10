@@ -53,26 +53,6 @@ const AddBookFlow = (() => {
     renderQuickAddStep(result);
   }
 
-  function dateFieldHTML(id, label) {
-    return `
-      <div class="field">
-        <label>${label}</label>
-        <div class="date-with-today">
-          <input type="date" class="input" id="${id}">
-          <button type="button" class="btn btn-ghost btn-sm" data-today-for="${id}">Today</button>
-        </div>
-      </div>`;
-  }
-
-  function wireTodayButtons(container) {
-    container.querySelectorAll('[data-today-for]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const input = container.querySelector(`#${btn.dataset.todayFor}`);
-        if (input) input.value = todayStr();
-      });
-    });
-  }
-
   // ---------------------------------------------------------
   // Step 1: search
   // ---------------------------------------------------------
@@ -223,8 +203,10 @@ const AddBookFlow = (() => {
         container.innerHTML = `
           <div class="form-row">
             <div class="field"><label>Current page</label><input class="input" type="number" id="ab-current-page" placeholder="Optional"></div>
-            ${dateFieldHTML('ab-date-started', 'Date started')}
-          </div>`;
+            ${partialDateFieldHTML('ab-date-started', 'Date started', '')}
+          </div>
+          <p class="text-muted" style="font-size:12px;margin-top:6px;">Don't remember the exact day? Leave Day blank.</p>`;
+        wirePartialDateField(container, 'ab-date-started', () => {});
       } else if (selectedStatus === 'finished') {
         container.innerHTML = `
           <div class="field" style="margin-bottom:14px;">
@@ -232,15 +214,17 @@ const AddBookFlow = (() => {
             <div id="ab-rating-mount" style="padding-top:4px;"></div>
           </div>
           <div class="form-row">
-            ${dateFieldHTML('ab-date-started', 'Date started')}
-            ${dateFieldHTML('ab-date-finished', 'Date finished')}
-          </div>`;
+            ${partialDateFieldHTML('ab-date-started', 'Date started', '')}
+            ${partialDateFieldHTML('ab-date-finished', 'Date finished', '')}
+          </div>
+          <p class="text-muted" style="font-size:12px;margin-top:6px;">Don't remember the exact day? Leave Day blank.</p>`;
         pendingRating = 0;
         mountStarInput(container.querySelector('#ab-rating-mount'), { size: '', onChange: (v) => (pendingRating = v) });
+        wirePartialDateField(container, 'ab-date-started', () => {});
+        wirePartialDateField(container, 'ab-date-finished', () => {});
       } else {
         container.innerHTML = '';
       }
-      wireTodayButtons(container);
     }
     renderSecondaryFields();
 
@@ -260,11 +244,15 @@ const AddBookFlow = (() => {
 
       const extra = { status: selectedStatus, format: modal.querySelector('#ab-format-select').value };
       const currentPageEl = modal.querySelector('#ab-current-page');
-      const dateStartedEl = modal.querySelector('#ab-date-started');
-      const dateFinishedEl = modal.querySelector('#ab-date-finished');
       if (currentPageEl && currentPageEl.value) extra.currentPage = currentPageEl.value;
-      if (dateStartedEl && dateStartedEl.value) extra.dateStarted = dateStartedEl.value;
-      if (dateFinishedEl && dateFinishedEl.value) extra.dateFinished = dateFinishedEl.value;
+      if (modal.querySelector('#ab-date-started-month')) {
+        const dateStarted = readPartialDateField(modal, 'ab-date-started');
+        if (dateStarted) extra.dateStarted = dateStarted;
+      }
+      if (modal.querySelector('#ab-date-finished-month')) {
+        const dateFinished = readPartialDateField(modal, 'ab-date-finished');
+        if (dateFinished) extra.dateFinished = dateFinished;
+      }
       if (selectedStatus === 'finished' && pendingRating) extra.rating = pendingRating;
 
       const entry = await addExternalBook(result, extra);
