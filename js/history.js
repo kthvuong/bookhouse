@@ -6,8 +6,11 @@
   initHeader('library');
   document.getElementById('subnav-root').innerHTML = renderLibrarySubnav('history');
 
-  let year = new Date().getFullYear();
-  let selectedMonth = null;
+  const requestedYear = Number(getQueryParam('year'));
+  const requestedMonth = getQueryParam('month');
+
+  let year = requestedYear || new Date().getFullYear();
+  let selectedMonth = requestedMonth !== null && requestedMonth !== '' ? Number(requestedMonth) : null;
   let entries = [];
   let sessions = [];
 
@@ -86,4 +89,5 @@
 
   await load();
   await renderGrid();
+  if (selectedMonth != null) await renderDetail();
 })();
