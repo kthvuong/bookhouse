@@ -218,6 +218,48 @@ async function logProgressUpdate(entry, book, { currentPage, percent, date }) {
   });
 }
 
+/**
+ * Small celebratory popup shown when a book is marked Finished — lets the
+ * reader drop in a star rating right away, or skip it entirely. Resolves
+ * with the chosen rating (or null if skipped/dismissed). Never invents a
+ * date; that stays the reader's call elsewhere.
+ */
+function promptFinishedRating(book) {
+  return new Promise(async (resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const cover = await coverMarkup(book);
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:380px;" role="dialog" aria-modal="true">
+        <div class="modal-body finished-popup">
+          <div class="finished-popup-cover">${cover}</div>
+          <div class="eyebrow" style="margin-top:14px;">Marked as Finished</div>
+          <h3 class="serif" style="margin-top:4px;">${escapeHtml(book.title)}</h3>
+          <p class="text-muted" style="font-size:13.5px;margin-top:4px;">Want to rate it now?</p>
+          <div id="finished-rating-mount" style="display:flex;justify-content:center;margin-top:14px;"></div>
+        </div>
+        <div class="modal-footer" style="justify-content:center;gap:12px;">
+          <button class="btn btn-ghost" id="finished-skip-btn">Skip</button>
+          <button class="btn btn-primary" id="finished-save-btn">Save Rating</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('open'));
+
+    let rating = 0;
+    mountStarInput(overlay.querySelector('#finished-rating-mount'), { size: 'lg', onChange: (v) => (rating = v) });
+
+    function finish(value) {
+      overlay.classList.remove('open');
+      setTimeout(() => overlay.remove(), 200);
+      resolve(value);
+    }
+    overlay.querySelector('#finished-skip-btn').addEventListener('click', () => finish(null));
+    overlay.querySelector('#finished-save-btn').addEventListener('click', () => finish(rating || null));
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) finish(null); });
+  });
+}
+
 /** Current consecutive-day reading streak from session dates (today may be "not yet logged" without breaking it). */
 function computeReadingStreak(sessionList) {
   const days = new Set(sessionList.map((s) => s.date));

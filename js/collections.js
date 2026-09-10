@@ -3,7 +3,8 @@
    ============================================================ */
 
 (async function () {
-  initHeader('collections');
+  initHeader('library');
+  document.getElementById('subnav-root').innerHTML = renderLibrarySubnav('collections');
   const grid = document.getElementById('collections-grid');
 
   async function render() {

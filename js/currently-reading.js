@@ -3,7 +3,8 @@
    ============================================================ */
 
 (async function () {
-  initHeader('currently-reading');
+  initHeader('library');
+  document.getElementById('subnav-root').innerHTML = renderLibrarySubnav('currently-reading');
   const list = document.getElementById('cr-list');
 
   async function load() {
@@ -68,7 +69,10 @@
       btn.addEventListener('click', async () => {
         const item = btn.closest('.cr-item');
         const entry = byId.get(item.dataset.entryId);
-        await Storage.ReadingEntries.update(entry.id, { status: 'finished', dateFinished: entry.dateFinished || todayStr() });
+        const rating = await promptFinishedRating(entry.book);
+        const patch = { status: 'finished' };
+        if (rating) patch.rating = rating;
+        await Storage.ReadingEntries.update(entry.id, patch);
         await render();
         toast('Marked as Finished 🎉');
       });

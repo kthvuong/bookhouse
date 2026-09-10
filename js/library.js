@@ -4,6 +4,7 @@
 
 (async function () {
   initHeader('library');
+  document.getElementById('subnav-root').innerHTML = renderLibrarySubnav('library');
 
   let allEntries = await Storage.ReadingEntries.allWithBooks();
   allEntries = allEntries.filter((e) => e.book);

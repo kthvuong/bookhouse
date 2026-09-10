@@ -22,7 +22,7 @@
     overlay.innerHTML = `
       <div class="auth-gate-card">
         <div class="auth-gate-mark">&#9679;</div>
-        <h1 class="serif">Marginalia</h1>
+        <h1 class="serif">${APP_NAME}</h1>
         ${mode === 'setup'
           ? `<p>Set a password to lock this journal to just you.</p>
              <input type="password" id="auth-pw1" class="input" placeholder="Choose a password" autocomplete="new-password">

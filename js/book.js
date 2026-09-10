@@ -41,7 +41,7 @@
       root.innerHTML = `<div class="empty-state"><h3>Book not found</h3><p>It may have been removed. <a href="library.html">Back to Library →</a></p></div>`;
       return;
     }
-    document.title = `Marginalia — ${book.title}`;
+    document.title = `${APP_NAME} — ${book.title}`;
     root.innerHTML = `
       ${headerHTML()}
       ${descriptionSectionHTML()}
@@ -276,10 +276,14 @@
 
     root.querySelector('#status-select').addEventListener('change', async (e) => {
       const newStatus = e.target.value;
-      const patch = { status: newStatus };
-      if (newStatus === 'currently_reading' && !entry.dateStarted) patch.dateStarted = todayStr();
-      if (newStatus === 'finished' && !entry.dateFinished) patch.dateFinished = todayStr();
-      await updateEntry(patch);
+      if (newStatus === 'finished') {
+        const rating = await promptFinishedRating(book);
+        const patch = { status: newStatus };
+        if (rating) patch.rating = rating;
+        await updateEntry(patch);
+      } else {
+        await updateEntry({ status: newStatus });
+      }
       await refresh();
       toast(`Marked as ${STATUS_LABELS[newStatus]}`);
     });
@@ -320,7 +324,10 @@
     const suggestFinish = root.querySelector('#suggest-finish-chip');
     if (suggestFinish) {
       suggestFinish.addEventListener('click', async () => {
-        await updateEntry({ status: 'finished', dateFinished: entry.dateFinished || todayStr() });
+        const rating = await promptFinishedRating(book);
+        const patch = { status: 'finished' };
+        if (rating) patch.rating = rating;
+        await updateEntry(patch);
         await refresh();
         toast('Marked as Finished 🎉');
       });

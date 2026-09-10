@@ -6,14 +6,27 @@
 const NAV_ITEMS = [
   { key: 'home', href: 'index.html', label: 'Home' },
   { key: 'library', href: 'library.html', label: 'Library' },
+  { key: 'stats', href: 'stats.html', label: 'Stats' },
+  { key: 'wrapped', href: 'wrapped.html', label: 'Wrapped' },
+  { key: 'settings', href: 'settings.html', label: 'Settings' },
+];
+
+/* These pages live under Library rather than in the main nav — this
+   local strip keeps them all reachable in one click of each other. */
+const LIBRARY_SUBNAV_ITEMS = [
+  { key: 'library', href: 'library.html', label: 'All Books' },
   { key: 'currently-reading', href: 'currently-reading.html', label: 'Currently Reading' },
   { key: 'want-to-read', href: 'want-to-read.html', label: 'Want to Read' },
   { key: 'collections', href: 'collections.html', label: 'Collections' },
   { key: 'history', href: 'history.html', label: 'Reading History' },
-  { key: 'stats', href: 'stats.html', label: 'Statistics' },
-  { key: 'wrapped', href: 'wrapped.html', label: 'Wrapped' },
-  { key: 'settings', href: 'settings.html', label: 'Settings' },
 ];
+
+function renderLibrarySubnav(activeKey) {
+  return `
+    <nav class="library-subnav">
+      ${LIBRARY_SUBNAV_ITEMS.map((item) => `<a href="${item.href}" class="${item.key === activeKey ? 'active' : ''}">${item.label}</a>`).join('')}
+    </nav>`;
+}
 
 const ICONS = {
   search: '<svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
@@ -46,7 +59,7 @@ function initHeader(activeKey) {
 
   root.innerHTML = `
     <header class="app-header">
-      <a class="brand" href="index.html"><span class="brand-mark">&#9679;</span>Marginalia</a>
+      <a class="brand" href="index.html"><span class="brand-mark">&#9679;</span>${APP_NAME}</a>
       <nav class="main-nav" id="main-nav">${navLinks}</nav>
       <div class="header-actions">
         <div class="search-box">

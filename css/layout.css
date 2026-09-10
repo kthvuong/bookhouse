@@ -70,6 +70,28 @@
 .page-shell.wide { max-width: 1360px; }
 .page-shell.narrow { max-width: 760px; }
 
+.library-subnav {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: var(--space-6);
+  border-bottom: 1px solid var(--border);
+}
+.library-subnav::-webkit-scrollbar { display: none; }
+.library-subnav a {
+  padding: 10px 4px;
+  margin-right: 22px;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  transition: color var(--dur-fast), border-color var(--dur-fast);
+}
+.library-subnav a:hover { color: var(--text-primary); }
+.library-subnav a.active { color: var(--accent-strong); border-bottom-color: var(--accent); font-weight: 600; }
+
 .page-header {
   display: flex;
   align-items: flex-end;

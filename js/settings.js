@@ -4,6 +4,7 @@
 
 (async function () {
   initHeader('settings');
+  document.getElementById('about-text').textContent = `${APP_NAME} is a private, single-user reading journal. Book search and cover art come from Open Library; everything you add is stored locally and stays yours.`;
 
   // ---- goals ----
   const yearInput = document.getElementById('goal-year');
@@ -84,6 +85,8 @@
   themeBtn.addEventListener('click', () => { toggleTheme(); refreshThemeLabel(); });
 
   // ---- backup / export ----
+  const appSlug = APP_NAME.toLowerCase().replace(/\s+/g, '-');
+
   function downloadFile(filename, content, mime) {
     const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
@@ -108,14 +111,14 @@
 
   document.getElementById('export-backup-btn').addEventListener('click', async () => {
     const data = await Storage.exportAll();
-    downloadFile(`marginalia-backup-${todayStr()}.json`, JSON.stringify(data), 'application/json');
+    downloadFile(`${appSlug}-backup-${todayStr()}.json`, JSON.stringify(data), 'application/json');
     toast('Backup downloaded');
   });
 
   document.getElementById('export-json-btn').addEventListener('click', async () => {
     const data = await Storage.exportAll();
     delete data.covers;
-    downloadFile(`marginalia-data-${todayStr()}.json`, JSON.stringify(data, null, 2), 'application/json');
+    downloadFile(`${appSlug}-data-${todayStr()}.json`, JSON.stringify(data, null, 2), 'application/json');
     toast('Data exported');
   });
 
@@ -151,7 +154,7 @@
       { label: 'Date Finished', get: (e) => e.dateFinished || '' },
       { label: 'Tags', get: (e) => (e.tags || []).join('; ') },
     ]);
-    downloadFile(`marginalia-library-${todayStr()}.csv`, csv, 'text/csv');
+    downloadFile(`${appSlug}-library-${todayStr()}.csv`, csv, 'text/csv');
     toast('Library exported');
   });
 
@@ -168,7 +171,7 @@
       { label: 'Format', get: (e) => FORMAT_LABELS[e.format] },
       { label: 'Date Started', get: (e) => e.dateStarted || '' },
     ]);
-    downloadFile(`marginalia-reading-history-${todayStr()}.csv`, csv, 'text/csv');
+    downloadFile(`${appSlug}-reading-history-${todayStr()}.csv`, csv, 'text/csv');
     toast('Reading history exported');
   });
 })();

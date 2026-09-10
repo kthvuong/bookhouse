@@ -4,7 +4,8 @@
    ============================================================ */
 
 (async function () {
-  initHeader('want-to-read');
+  initHeader('library');
+  document.getElementById('subnav-root').innerHTML = renderLibrarySubnav('want-to-read');
 
   const list = document.getElementById('tbr-list');
   const state = { genre: 'all', author: 'all', length: 'all' };
@@ -158,7 +159,7 @@
       </div>`;
     document.getElementById('picker-again-btn').addEventListener('click', runPick);
     document.getElementById('picker-start-btn').addEventListener('click', async () => {
-      await Storage.ReadingEntries.update(pick.id, { status: 'currently_reading', dateStarted: pick.dateStarted || todayStr() });
+      await Storage.ReadingEntries.update(pick.id, { status: 'currently_reading' });
       window.location.href = `book.html?id=${pick.book.id}`;
     });
   }

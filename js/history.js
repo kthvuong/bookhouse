@@ -3,7 +3,8 @@
    ============================================================ */
 
 (async function () {
-  initHeader('history');
+  initHeader('library');
+  document.getElementById('subnav-root').innerHTML = renderLibrarySubnav('history');
 
   let year = new Date().getFullYear();
   let selectedMonth = null;
