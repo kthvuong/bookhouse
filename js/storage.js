@@ -12,7 +12,8 @@
    collections        named custom lists
    collectionItems    join: collectionId <-> readingEntryId (+ sortOrder)
    goals              annual reading goals, keyed by year
-   wrapped            frozen yearly "Wrapped" snapshots, keyed by year
+   wrapped            manual yearly superlative picks (favourite book, etc.),
+                      keyed by year — shown on the Statistics page
    covers             cached cover image blobs, keyed by bookId
 
    Everything is exposed on the global `Storage` namespace.
@@ -350,7 +351,8 @@ const Storage = (() => {
     get: (year) => get('wrapped', String(year)),
     getAll: () => getAll('wrapped').then((rows) => rows.sort((a, b) => b.year - a.year)),
     async save(year, data) {
-      const record = { id: String(year), year, generatedAt: nowIso(), ...data };
+      const existing = await get('wrapped', String(year));
+      const record = { ...existing, id: String(year), year, updatedAt: nowIso(), ...data };
       await put('wrapped', record);
       return record;
     },

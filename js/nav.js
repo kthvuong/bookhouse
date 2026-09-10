@@ -6,8 +6,8 @@
 const NAV_ITEMS = [
   { key: 'home', href: 'index.html', label: 'Home' },
   { key: 'library', href: 'library.html', label: 'Library' },
+  { key: 'explore', href: 'explore.html', label: 'Explore' },
   { key: 'stats', href: 'stats.html', label: 'Stats' },
-  { key: 'wrapped', href: 'wrapped.html', label: 'Wrapped' },
   { key: 'settings', href: 'settings.html', label: 'Settings' },
 ];
 

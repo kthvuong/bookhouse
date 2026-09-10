@@ -52,6 +52,32 @@ const BooksAPI = (() => {
       });
     },
 
+    async searchBySubject(subject, { limit = 12 } = {}) {
+      const slug = subject.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+      if (!slug) return [];
+      try {
+        const res = await fetch(`https://openlibrary.org/subjects/${encodeURIComponent(slug)}.json?limit=${limit}&sort=rating`);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data.works || []).map((w) => ({
+          externalId: w.key,
+          source: 'openlibrary',
+          title: w.title || 'Untitled',
+          subtitle: '',
+          authors: (w.authors || []).map((a) => a.name).filter(Boolean),
+          firstPublishYear: w.first_publish_year || null,
+          isbn10: '',
+          isbn13: '',
+          coverUrl: coverUrlFromId(w.cover_id, 'M'),
+          coverUrlLarge: coverUrlFromId(w.cover_id, 'L'),
+          pageCount: null,
+          editionCount: w.edition_count || null,
+        }));
+      } catch {
+        return [];
+      }
+    },
+
     async getDetails(workKey) {
       try {
         const res = await fetch(`https://openlibrary.org${workKey}.json`);
@@ -91,6 +117,7 @@ const BooksAPI = (() => {
     },
     providerName: () => activeProvider.name,
     search: (query, opts) => activeProvider.search(query, opts),
+    searchBySubject: (subject, opts) => activeProvider.searchBySubject(subject, opts),
     getDetails: (externalId) => activeProvider.getDetails(externalId),
     fetchCoverBlob: (url) => activeProvider.fetchCoverBlob(url),
   };

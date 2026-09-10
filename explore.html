@@ -3,44 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reading History</title>
+<title>Explore</title>
 <script src="js/config.js?v=6"></script>
 <script src="js/theme-init.js?v=6"></script>
 <script src="js/auth-init.js?v=6"></script>
 <link rel="stylesheet" href="css/base.css?v=6">
 <link rel="stylesheet" href="css/layout.css?v=6">
 <link rel="stylesheet" href="css/components.css?v=6">
-<link rel="stylesheet" href="css/history.css?v=6">
+<link rel="stylesheet" href="css/explore.css?v=6">
 </head>
 <body>
 <script src="js/auth-gate.js?v=6"></script>
 <div id="header-root"></div>
-<div class="page-shell wide" style="padding-top:20px;padding-bottom:0;"><div id="subnav-root"></div></div>
 
-<main class="page-shell wide">
+<main class="page-shell">
   <div class="page-header">
     <div>
-      <h1 class="page-title">Reading History</h1>
-      <p class="page-subtitle">Browse what you read, month by month.</p>
+      <h1 class="page-title">Explore</h1>
+      <p class="page-subtitle">A shelf curated from what you've already loved.</p>
     </div>
   </div>
 
-  <div class="year-switcher">
-    <button id="prev-year">←</button>
-    <span class="year-figure" id="year-label"></span>
-    <button id="next-year">→</button>
-  </div>
-
-  <div class="month-grid" id="month-grid"></div>
-  <div class="month-detail-panel" id="month-detail" hidden></div>
+  <div id="explore-container"></div>
 </main>
 
 <script src="js/storage.js?v=6"></script>
 <script src="js/books-api.js?v=6"></script>
 <script src="js/utils.js?v=6"></script>
+<script src="js/stats-engine.js?v=6"></script>
+<script src="js/stats-render.js?v=6"></script>
 <script src="js/nav.js?v=6"></script>
 <script src="js/add-book.js?v=6"></script>
 <script src="js/book-preview.js?v=6"></script>
-<script src="js/history.js?v=6"></script>
+<script src="js/explore.js?v=6"></script>
 </body>
 </html>

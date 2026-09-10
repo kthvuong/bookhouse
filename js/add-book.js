@@ -419,5 +419,5 @@ const AddBookFlow = (() => {
     return entry;
   }
 
-  return { open, openWithResult, close };
+  return { open, openWithResult, close, quickAdd: addExternalBook };
 })();

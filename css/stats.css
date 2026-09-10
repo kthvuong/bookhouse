@@ -7,7 +7,24 @@
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: var(--space-8);
+  margin-bottom: var(--space-5);
+}
+
+.year-chip-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: var(--space-7);
+  scrollbar-width: none;
+}
+.year-chip-row::-webkit-scrollbar { display: none; }
+.year-chip {
+  flex-shrink: 0;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 8px 18px;
 }
 
 .stat-hero {

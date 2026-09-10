@@ -49,42 +49,57 @@ function mountStarInput(container, opts) {
   let value = opts.value || 0;
   const size = opts.size || 'lg';
 
-  function render(previewValue) {
-    const r = previewValue != null ? previewValue : value;
-    let slots = '';
+  // Build the star DOM exactly once. Hover/click only ever adjust the fill
+  // widths of existing elements afterwards — never rebuild the hit-areas —
+  // so a click can't land on a half-hit span that a preceding mousemove
+  // already tore down and replaced out from under the cursor.
+  let slots = '';
+  for (let i = 0; i < 5; i++) {
+    slots += `
+      <span class="star-slot" data-index="${i}">
+        ${svgStar('star-bg')}
+        <span class="star-fg-wrap" style="position:absolute;inset:0;overflow:hidden;width:0%;">${svgStar('star-fg')}</span>
+        <span class="half-hit" data-value="${i + 0.5}"></span>
+        <span class="half-hit right" data-value="${i + 1}"></span>
+      </span>`;
+  }
+  container.innerHTML = `
+    <span class="star-input ${size}">${slots}</span>
+    <span class="rating-label"></span>
+  `;
+
+  const fgWraps = container.querySelectorAll('.star-fg-wrap');
+  const label = container.querySelector('.rating-label');
+
+  function paintFill(r) {
     for (let i = 0; i < 5; i++) {
       const diff = r - i;
       const fillPct = diff >= 1 ? 100 : diff > 0 ? 50 : 0;
-      slots += `
-        <span class="star-slot" data-index="${i}">
-          ${svgStar('star-bg')}
-          <span style="position:absolute;inset:0;overflow:hidden;width:${fillPct}%;">${svgStar('star-fg')}</span>
-          <span class="half-hit" data-value="${i + 0.5}"></span>
-          <span class="half-hit right" data-value="${i + 1}"></span>
-        </span>`;
+      fgWraps[i].style.width = `${fillPct}%`;
     }
-    container.innerHTML = `
-      <span class="star-input ${size}">${slots}</span>
-      <span class="rating-label">${value ? ratingText(value) : 'Tap to rate'}</span>
-    `;
+  }
+  function paintLabel() {
+    label.textContent = value ? ratingText(value) : 'Tap to rate';
   }
 
   container.addEventListener('mousemove', (e) => {
     const hit = e.target.closest('.half-hit');
     if (!hit) return;
-    render(parseFloat(hit.dataset.value));
+    paintFill(parseFloat(hit.dataset.value));
   });
-  container.addEventListener('mouseleave', () => render());
+  container.addEventListener('mouseleave', () => paintFill(value));
   container.addEventListener('click', (e) => {
     const hit = e.target.closest('.half-hit');
     if (!hit) return;
     value = parseFloat(hit.dataset.value);
-    render();
+    paintFill(value);
+    paintLabel();
     opts.onChange && opts.onChange(value);
   });
 
-  render();
-  return { setValue: (v) => { value = v; render(); } };
+  paintFill(value);
+  paintLabel();
+  return { setValue: (v) => { value = v; paintFill(value); paintLabel(); } };
 }
 
 /** Reading dates (dateStarted/dateFinished) may be day-precise ("YYYY-MM-DD")

@@ -174,7 +174,7 @@ const GENRE_ARCHETYPES = [
   { key: 'poetry', match: ['poetry', 'poems'], title: 'The Dreamer', emoji: '🌸', blurb: 'You read in fragments and feelings.' },
   { key: 'literary', match: ['literary fiction', 'literature'], title: 'The Literary Wanderer', emoji: '🖋️', blurb: 'You read for the sentences as much as the story.' },
 ];
-const FALLBACK_ARCHETYPE = { title: 'The Genre Wanderer', emoji: '🧭', blurb: "You don't belong to just one shelf — you read wherever the mood takes you." };
+const FALLBACK_ARCHETYPE = { key: 'wanderer', title: 'The Genre Wanderer', emoji: '🧭', blurb: "You don't belong to just one shelf — you read wherever the mood takes you." };
 
 function deriveArchetype(stats) {
   const buckets = {};
@@ -250,4 +250,64 @@ function firstLastSectionHTML(stats) {
         <div><div class="eyebrow">Last finished</div><div class="bookend-title serif">${escapeHtml(stats.lastFinished.book.title)}</div><div class="text-muted">${formatDate(stats.lastFinished.dateFinished, 'short')}</div></div>
       </div>
     </section>`;
+}
+
+/* ---------------------------------------------------------
+   Yearly superlative picks (favourite book of the year, etc.)
+   — the one piece of Wrapped that isn't purely computed: a
+   handful of manual picks you make, stored per year and shown
+   whenever Stats is viewing that year.
+   --------------------------------------------------------- */
+const SUPERLATIVES = [
+  { key: 'favoriteBookId', label: 'Favourite Book of the Year' },
+  { key: 'biggestSurpriseId', label: 'Biggest Surprise' },
+  { key: 'biggestDisappointmentId', label: 'Biggest Disappointment' },
+  { key: 'bestCoverId', label: 'Best Cover' },
+  { key: 'couldntStopId', label: "Couldn't Stop Thinking About It" },
+];
+
+async function superlativesSectionHTML(year, stats, record) {
+  const eligible = stats.finished;
+  if (!eligible.length) return '';
+  const picks = record || {};
+  const cards = await Promise.all(SUPERLATIVES.map(async (s) => {
+    const bookId = picks[s.key];
+    const entry = bookId ? eligible.find((e) => e.book.id === bookId) : null;
+    const cover = entry ? await coverMarkup(entry.book) : '';
+    const options = [`<option value="">— choose —</option>`].concat(
+      eligible.map((e) => `<option value="${e.book.id}" ${e.book.id === bookId ? 'selected' : ''}>${escapeHtml(e.book.title)}</option>`)
+    ).join('');
+    return `
+      <div class="superlative-card">
+        <div class="cover-wrap ${entry ? '' : 'empty'}">${entry ? cover : 'Not chosen yet'}</div>
+        <div class="label">${s.label}</div>
+        ${entry ? `<div class="pick-title">${escapeHtml(entry.book.title)}</div>` : ''}
+        <select class="select" data-superlative="${s.key}" data-superlative-year="${year}" style="margin-top:6px;font-size:12px;padding:5px 8px;">${options}</select>
+      </div>`;
+  }));
+  return `
+    <section class="stat-section fade-in">
+      <h2 class="stat-section-title">Your Picks for ${year}</h2>
+      <p class="stat-section-caption">Choose from the books you finished this year.</p>
+      <div class="superlative-grid">${cards.join('')}</div>
+    </section>`;
+}
+
+/** Wires up superlative <select> elements rendered anywhere in `root`; calls onSaved() after each pick persists. */
+function wireSuperlatives(root, onSaved) {
+  root.querySelectorAll('[data-superlative]').forEach((sel) => {
+    sel.addEventListener('change', async () => {
+      const year = Number(sel.dataset.superlativeYear);
+      await Storage.Wrapped.save(year, { [sel.dataset.superlative]: sel.value || null });
+      onSaved && onSaved();
+    });
+  });
+}
+
+/** Compact, theme-matched year picker — replaces a plain <select> with a row of chips. */
+function yearChipRowHTML(years, selectedYear) {
+  return `
+    <div class="year-chip-row">
+      ${years.map((y) => `<button type="button" class="chip year-chip ${y === selectedYear ? 'active' : ''}" data-year-chip="${y}">${y}</button>`).join('')}
+    </div>`;
 }
