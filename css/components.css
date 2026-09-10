@@ -139,6 +139,16 @@
 }
 .search-empty { padding: 24px 16px; text-align: center; color: var(--text-muted); font-size: 13.5px; }
 
+.search-show-all-btn {
+  display: block; width: 100%; text-align: center;
+  padding: 10px 16px; margin-top: 2px;
+  border: none; border-top: 1px solid var(--border);
+  background: none; cursor: pointer;
+  font-size: 13px; font-weight: 600; color: var(--accent);
+  transition: background var(--dur-fast);
+}
+.search-show-all-btn:hover { background: var(--surface-hover); }
+
 /* ---------- Add Book: search results (browsing step) ---------- */
 .ab-result-row {
   display: flex; align-items: center; gap: 12px;
