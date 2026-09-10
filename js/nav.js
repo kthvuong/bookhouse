@@ -173,10 +173,20 @@ function initGlobalSearch() {
     html += renderSearchGroup('From Open Library', newResults.map(externalRowHTML));
     if (!personalMatches.length && !newResults.length) {
       html = `<div class="search-empty">No matches for "${escapeHtml(query)}"</div>`;
+    } else if (newResults.length) {
+      html += `<button type="button" class="search-show-all-btn" id="search-show-all">Show all results for "${escapeHtml(query.trim())}" →</button>`;
     }
     panel.innerHTML = html;
     panel.hidden = false;
     wireSearchPanelClicks(panel, personalMatches, newResults);
+    const showAllBtn = panel.querySelector('#search-show-all');
+    if (showAllBtn) {
+      showAllBtn.addEventListener('click', () => {
+        panel.hidden = true;
+        closeMobileSearch();
+        AddBookFlow.open(query.trim());
+      });
+    }
   }, 320);
 
   input.addEventListener('input', (e) => runSearch(e.target.value));
