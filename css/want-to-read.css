@@ -1,0 +1,66 @@
+/* ============================================================
+   want-to-read.css
+   ============================================================ */
+
+.tbr-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: var(--space-5);
+}
+
+.tbr-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  transition: background var(--dur-fast);
+}
+.tbr-row.dragging { opacity: 0.4; }
+.tbr-row.drag-over { border-top: 2px solid var(--accent); }
+
+.tbr-row .drag-handle {
+  cursor: grab;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+  user-select: none;
+}
+.tbr-row .drag-handle.disabled { visibility: hidden; }
+
+.tbr-row .thumb {
+  width: 42px; height: 62px; object-fit: cover; border-radius: 4px; flex-shrink: 0;
+  box-shadow: var(--shadow-sm); background: var(--surface-hover);
+}
+.tbr-row .info { flex: 1; min-width: 0; }
+.tbr-row .info .title { font-weight: 600; font-size: 14.5px; }
+.tbr-row .info .author { font-size: 12.5px; color: var(--text-muted); }
+.tbr-row .info .chip-row { margin-top: 5px; }
+.tbr-row .priority-select {
+  border: 1px solid var(--border-strong); background: var(--surface); border-radius: var(--radius-pill);
+  padding: 5px 10px; font-size: 12px; font-weight: 600; cursor: pointer; flex-shrink: 0;
+}
+.tbr-row .pages-label { font-size: 12.5px; color: var(--text-muted); width: 70px; flex-shrink: 0; text-align: right; }
+
+.priority-high { color: var(--danger); }
+.priority-normal { color: var(--text-secondary); }
+.priority-low { color: var(--text-muted); }
+
+/* ---- picker modal ---- */
+.picker-reveal {
+  text-align: center;
+  padding: 10px 0 20px;
+}
+.picker-reveal .cover-wrap {
+  width: 150px; margin: 0 auto 18px; aspect-ratio: 2/3;
+  border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-lg);
+  background: var(--surface-hover);
+}
+.picker-reveal h3 { font-size: 24px; margin-bottom: 4px; }
+.picker-reveal .author { color: var(--text-secondary); margin-bottom: 20px; }
+.picker-actions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }

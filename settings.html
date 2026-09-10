@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marginalia — Settings</title>
+<script src="js/theme-init.js"></script>
+<script src="js/auth-init.js"></script>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/settings.css">
+</head>
+<body>
+<script src="js/auth-gate.js"></script>
+<div id="header-root"></div>
+
+<main class="page-shell narrow">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Settings</h1>
+      <p class="page-subtitle">Goals, appearance, and keeping your data safe.</p>
+    </div>
+  </div>
+
+  <section class="settings-section" id="goals">
+    <h2>Reading Goals</h2>
+    <p class="desc">Set an annual target for books and pages. Past years are kept so you can look back.</p>
+    <div class="form-row">
+      <div class="field" style="max-width:100px;"><label>Year</label><input class="input" id="goal-year" type="number"></div>
+      <div class="field" style="max-width:140px;"><label>Books goal</label><input class="input" id="goal-books" type="number" min="0"></div>
+      <div class="field" style="max-width:140px;"><label>Pages goal</label><input class="input" id="goal-pages" type="number" min="0"></div>
+      <div class="field" style="align-self:flex-end;"><button class="btn btn-primary" id="save-goal-btn">Save Goal</button></div>
+    </div>
+    <div class="goal-history-list" id="goal-history"></div>
+  </section>
+
+  <section class="settings-section">
+    <h2>Appearance</h2>
+    <p class="desc">Switch between a warm light theme and a warm, luxurious dark theme.</p>
+    <button class="btn" id="settings-theme-toggle"></button>
+  </section>
+
+  <section class="settings-section">
+    <h2>Privacy &amp; Lock</h2>
+    <p class="desc">A password screen so a stranger with your hosted link can't casually browse your journal. This runs entirely in your browser — it's a deterrent, not bank-grade security.</p>
+    <div class="form-row">
+      <div class="field" style="max-width:220px;"><label>New password</label><input class="input" id="new-password" type="password" placeholder="At least 4 characters" autocomplete="new-password"></div>
+      <div class="field" style="max-width:220px;"><label>Confirm</label><input class="input" id="confirm-password" type="password" autocomplete="new-password"></div>
+      <div class="field" style="align-self:flex-end;"><button class="btn btn-primary" id="set-password-btn">Set Password</button></div>
+    </div>
+    <div class="settings-actions" style="margin-top:14px;">
+      <button class="btn" id="lock-now-btn">Lock This Device Now</button>
+      <button class="btn btn-ghost btn-danger" id="remove-password-btn">Remove Password Protection</button>
+    </div>
+    <p class="danger-note">Forgot it? Open your browser's console on this page and run <code>localStorage.clear()</code>, then refresh — you'll be asked to set a new password. Your library itself lives in IndexedDB and is untouched by this.</p>
+  </section>
+
+  <section class="settings-section">
+    <h2>Backup &amp; Export</h2>
+    <p class="desc">Your reading data lives entirely in this browser. Back it up regularly — it never depends on Open Library staying available.</p>
+    <div class="settings-actions">
+      <button class="btn btn-primary" id="export-backup-btn">⬇ Download Full Backup (.json)</button>
+      <label class="btn" for="restore-file-input" style="cursor:pointer;">⬆ Restore from Backup</label>
+      <input type="file" id="restore-file-input" accept="application/json" hidden>
+    </div>
+    <p class="danger-note">Restoring replaces everything currently in your library with the contents of the backup file.</p>
+    <hr class="divider">
+    <div class="settings-actions">
+      <button class="btn" id="export-library-csv-btn">Export Library as CSV</button>
+      <button class="btn" id="export-history-csv-btn">Export Reading History as CSV</button>
+      <button class="btn" id="export-json-btn">Export Data as JSON</button>
+    </div>
+  </section>
+
+  <section class="settings-section">
+    <h2>About</h2>
+    <p class="desc">Marginalia is a private, single-user reading journal. Book search and cover art come from Open Library; everything you add is stored locally and stays yours.</p>
+  </section>
+</main>
+
+<script src="js/storage.js"></script>
+<script src="js/books-api.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/add-book.js"></script>
+<script src="js/settings.js"></script>
+</body>
+</html>

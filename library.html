@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marginalia — Library</title>
+<script src="js/theme-init.js"></script>
+<script src="js/auth-init.js"></script>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/library.css">
+</head>
+<body>
+<script src="js/auth-gate.js"></script>
+<div id="header-root"></div>
+
+<main class="page-shell wide">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Library</h1>
+      <p class="page-subtitle">Every book you've added, all in one place.</p>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <select class="filter-select" id="filter-status">
+      <option value="all">All statuses</option>
+      <option value="want_to_read">Want to Read</option>
+      <option value="currently_reading">Currently Reading</option>
+      <option value="finished">Finished</option>
+      <option value="dnf">Did Not Finish</option>
+      <option value="paused">Paused</option>
+    </select>
+    <select class="filter-select" id="filter-genre"><option value="all">All genres</option></select>
+    <select class="filter-select" id="filter-author"><option value="all">All authors</option></select>
+    <select class="filter-select" id="filter-format">
+      <option value="all">All formats</option>
+      <option value="physical">Physical</option>
+      <option value="ebook">Kindle / eBook</option>
+      <option value="audiobook">Audiobook</option>
+    </select>
+    <select class="filter-select" id="filter-rating">
+      <option value="0">Any rating</option>
+      <option value="5">5 stars</option>
+      <option value="4">4+ stars</option>
+      <option value="3">3+ stars</option>
+      <option value="2">2+ stars</option>
+      <option value="1">1+ stars</option>
+    </select>
+
+    <span class="spacer"></span>
+    <span class="result-count" id="result-count"></span>
+    <select class="filter-select" id="sort-select">
+      <option value="dateAdded_desc">Recently added</option>
+      <option value="dateAdded_asc">Oldest added</option>
+      <option value="title_asc">Title A–Z</option>
+      <option value="title_desc">Title Z–A</option>
+      <option value="author_asc">Author A–Z</option>
+      <option value="dateFinished_desc">Recently finished</option>
+      <option value="rating_desc">Highest rated</option>
+      <option value="rating_asc">Lowest rated</option>
+      <option value="pubYear_desc">Newest publication</option>
+      <option value="pubYear_asc">Oldest publication</option>
+    </select>
+    <div class="view-toggle">
+      <button id="view-grid-btn" class="active" title="Grid view" aria-label="Grid view">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      </button>
+      <button id="view-list-btn" title="List view" aria-label="List view">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="library-grid" class="cover-grid"></div>
+  <div id="library-list" class="library-list" hidden></div>
+  <div id="library-empty"></div>
+</main>
+
+<script src="js/storage.js"></script>
+<script src="js/books-api.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/add-book.js"></script>
+<script src="js/library.js"></script>
+</body>
+</html>

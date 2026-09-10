@@ -1,0 +1,63 @@
+/* ============================================================
+   home.css — dashboard-specific styling
+   ============================================================ */
+
+#home-greeting { margin-top: 4px; }
+
+.cr-card { width: 168px; }
+.cr-card .cover-wrap { aspect-ratio: 2/3; }
+.cr-card .progress-track { height: 5px; margin-top: 8px; }
+.cr-card .progress-caption {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  justify-content: space-between;
+}
+
+.rail .book-card { width: 140px; }
+
+.goal-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.goal-row .goal-figure {
+  font-family: var(--font-serif);
+  font-size: 30px;
+  font-weight: 600;
+}
+.goal-row .goal-figure small {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.goal-empty a { color: var(--accent); font-weight: 600; }
+
+.mini-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.mini-stat .figure {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 600;
+}
+.mini-stat .caption {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.streak-line {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

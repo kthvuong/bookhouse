@@ -1,0 +1,95 @@
+/* ============================================================
+   book.css — book detail page
+   ============================================================ */
+
+.book-header {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: var(--space-7);
+  margin-bottom: var(--space-8);
+}
+.book-header .cover-wrap {
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  aspect-ratio: 2/3;
+  background: var(--surface-hover);
+}
+
+.book-info .eyebrow-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.book-info h1 { font-size: clamp(28px, 3.4vw, 40px); margin-bottom: 4px; }
+.book-info .subtitle-line { font-size: 16px; color: var(--text-secondary); font-family: var(--font-serif); font-style: italic; margin-bottom: 8px; }
+.book-info .authors-line { font-size: 16px; color: var(--text-secondary); margin-bottom: 16px; }
+
+.meta-strip {
+  display: flex; flex-wrap: wrap; gap: 18px;
+  font-size: 13.5px; color: var(--text-muted);
+  margin: 16px 0 18px;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.meta-strip .meta-item strong { color: var(--text-primary); font-weight: 600; }
+
+.control-row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 16px; }
+.control-row .field-inline { display: flex; align-items: center; gap: 8px; }
+.control-row label.mini { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+
+.status-select-wrap select.status-select {
+  border: none; background: var(--surface); border-radius: var(--radius-pill);
+  padding: 8px 14px; font-weight: 600; font-size: 13.5px; cursor: pointer;
+  border: 1px solid var(--border-strong);
+}
+
+.book-section { margin-bottom: var(--space-7); }
+.book-section h2 { font-size: 18px; margin-bottom: 14px; }
+
+.description-text { font-size: 14.5px; line-height: 1.7; color: var(--text-secondary); white-space: pre-line; }
+.description-text.clamped { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+.description-toggle { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--accent); cursor: pointer; background: none; border: none; padding: 0; }
+
+/* ---- progress ---- */
+.progress-panel .progress-input-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+.progress-panel .progress-input-row .field { max-width: 140px; }
+.progress-stats-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 14px; margin-top: 18px;
+}
+.progress-stats-grid .stat .figure { font-family: var(--font-serif); font-size: 20px; font-weight: 600; }
+.progress-stats-grid .stat .label { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+.progress-stats-grid .stat.subtle { opacity: 0.7; }
+
+.progress-history { margin-top: 20px; }
+.progress-history-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 13px; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
+.progress-history-row .remove-btn { opacity: 0; cursor: pointer; color: var(--text-muted); background: none; border: none; }
+.progress-history-row:hover .remove-btn { opacity: 1; }
+
+/* ---- sessions ---- */
+.session-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+.session-row .session-pages { color: var(--text-secondary); }
+.session-row .session-minutes { color: var(--text-muted); font-size: 12.5px; }
+
+/* ---- quotes ---- */
+.quote-card {
+  padding: 16px 18px; background: var(--bg-elevated); border-left: 3px solid var(--accent-soft);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0; margin-bottom: 12px;
+  font-family: var(--font-serif); font-size: 15.5px; line-height: 1.6; font-style: italic; position: relative;
+}
+.quote-card .quote-page { font-family: var(--font-sans); font-style: normal; font-size: 11.5px; color: var(--text-muted); margin-top: 8px; }
+.quote-card .remove-btn { position: absolute; top: 10px; right: 12px; opacity: 0; background: none; border: none; cursor: pointer; color: var(--text-muted); font-family: var(--font-sans); font-style: normal; }
+.quote-card:hover .remove-btn { opacity: 1; }
+
+.add-inline-form { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-top: 14px; }
+
+.tag-input-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.tag-input-row input { max-width: 200px; }
+
+.collection-checklist { display: flex; flex-direction: column; gap: 8px; }
+.collection-checklist label { display: flex; align-items: center; gap: 10px; font-size: 14px; cursor: pointer; }
+
+.danger-zone { padding-top: var(--space-6); border-top: 1px solid var(--border); }
+
+@media (max-width: 720px) {
+  .book-header { grid-template-columns: 130px 1fr; gap: var(--space-4); }
+}

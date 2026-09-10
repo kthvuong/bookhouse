@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marginalia — Statistics</title>
+<script src="js/theme-init.js"></script>
+<script src="js/auth-init.js"></script>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/charts.css">
+<link rel="stylesheet" href="css/stats.css">
+</head>
+<body>
+<script src="js/auth-gate.js"></script>
+<div id="header-root"></div>
+
+<main class="page-shell narrow">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Statistics</h1>
+      <p class="page-subtitle">Your reading life, as it happens.</p>
+    </div>
+  </div>
+
+  <div class="stat-period-switcher">
+    <div class="segmented" id="period-segmented">
+      <button data-period="month">This Month</button>
+      <button data-period="year">This Year</button>
+      <button data-period="allTime">All Time</button>
+    </div>
+    <select class="filter-select" id="year-picker" hidden></select>
+  </div>
+
+  <div id="stats-container"></div>
+</main>
+
+<script src="js/storage.js"></script>
+<script src="js/books-api.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/stats-engine.js"></script>
+<script src="js/stats-render.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/add-book.js"></script>
+<script src="js/stats.js"></script>
+</body>
+</html>

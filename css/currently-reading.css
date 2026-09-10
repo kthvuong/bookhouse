@@ -1,0 +1,31 @@
+/* ============================================================
+   currently-reading.css
+   ============================================================ */
+
+.cr-item {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: var(--space-5);
+  padding: var(--space-5) 0;
+  border-bottom: 1px solid var(--border);
+}
+.cr-item .cover-wrap {
+  position: relative;
+  aspect-ratio: 2/3;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  background: var(--surface-hover);
+}
+.cr-item .cr-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.cr-item h3 { font-size: 19px; margin-bottom: 2px; }
+.cr-item .author { color: var(--text-secondary); font-size: 13.5px; margin-bottom: 12px; }
+.cr-item .progress-meta { margin-bottom: 14px; }
+.cr-item .quick-update-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cr-item .quick-update-row input { width: 100px; }
+.cr-item .quick-update-row .detail-link { margin-left: auto; font-size: 13px; font-weight: 600; color: var(--accent); }

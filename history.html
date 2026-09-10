@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marginalia — Reading History</title>
+<script src="js/theme-init.js"></script>
+<script src="js/auth-init.js"></script>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/history.css">
+</head>
+<body>
+<script src="js/auth-gate.js"></script>
+<div id="header-root"></div>
+
+<main class="page-shell wide">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Reading History</h1>
+      <p class="page-subtitle">Browse what you read, month by month.</p>
+    </div>
+  </div>
+
+  <div class="year-switcher">
+    <button id="prev-year">←</button>
+    <span class="year-figure" id="year-label"></span>
+    <button id="next-year">→</button>
+  </div>
+
+  <div class="month-grid" id="month-grid"></div>
+  <div class="month-detail-panel" id="month-detail" hidden></div>
+</main>
+
+<script src="js/storage.js"></script>
+<script src="js/books-api.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/add-book.js"></script>
+<script src="js/history.js"></script>
+</body>
+</html>

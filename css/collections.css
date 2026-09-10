@@ -1,0 +1,37 @@
+/* ============================================================
+   collections.css
+   ============================================================ */
+
+.collections-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-5);
+}
+.collection-tile {
+  cursor: pointer;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  transition: transform var(--dur-med) var(--ease-out), box-shadow var(--dur-med) var(--ease-out);
+}
+.collection-tile:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+.collection-tile .mini-collage {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-bottom: 14px;
+  aspect-ratio: 4/1.7;
+}
+.collection-tile .mini-collage .tile { border-radius: 4px; overflow: hidden; background: var(--surface-hover); }
+.collection-tile .mini-collage .tile img { width: 100%; height: 100%; object-fit: cover; }
+.collection-tile h3 { font-size: 17px; margin-bottom: 2px; }
+.collection-tile .count { font-size: 12.5px; color: var(--text-muted); }
+.collection-tile.new-tile {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 140px; border-style: dashed; color: var(--text-muted); font-weight: 600;
+}
+
+.collection-detail-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.collection-detail-header h1 { outline: none; }
+.collection-detail-header h1[contenteditable]:hover { background: var(--surface-hover); border-radius: 4px; }

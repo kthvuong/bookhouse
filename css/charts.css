@@ -1,0 +1,50 @@
+/* ============================================================
+   charts.css — styling for the hand-rolled SVG chart primitives
+   ============================================================ */
+
+.ring-chart .ring-progress { transition: stroke-dashoffset 900ms var(--ease-out); }
+.ring-chart .ring-label {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 600;
+  fill: var(--text-primary);
+}
+.ring-chart .ring-sublabel {
+  font-size: 10px;
+  fill: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.bar-chart .bar-axis-label {
+  font-size: 4.6px;
+  fill: var(--text-muted);
+  font-family: var(--font-sans);
+}
+.bar-chart .bar-value-label {
+  font-size: 4.6px;
+  fill: var(--text-secondary);
+  font-weight: 600;
+  font-family: var(--font-sans);
+}
+.bar-chart .bar-col rect {
+  animation: bar-grow 700ms var(--ease-out) both;
+  transform-origin: bottom;
+}
+@keyframes bar-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.bar-chart .bar-col { transform-box: fill-box; }
+
+.cover-collage {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  gap: 10px;
+}
+.collage-tile {
+  aspect-ratio: 2 / 3;
+  border-radius: 5px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  background: var(--surface-hover);
+}
+.collage-tile img { width: 100%; height: 100%; object-fit: cover; }
+.collage-tile .cover-fallback { font-size: 9px; padding: 6px; }

@@ -1,0 +1,19 @@
+/* ============================================================
+   settings.css
+   ============================================================ */
+
+.settings-section {
+  padding: var(--space-6) 0;
+  border-bottom: 1px solid var(--border);
+}
+.settings-section:last-child { border-bottom: none; }
+.settings-section h2 { font-size: 19px; margin-bottom: 6px; }
+.settings-section .desc { color: var(--text-secondary); font-size: 13.5px; margin-bottom: 18px; max-width: 60ch; }
+
+.goal-history-list { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+.goal-history-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+.goal-history-row .year { font-weight: 600; font-family: var(--font-serif); font-size: 16px; }
+
+.settings-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.danger-note { font-size: 12.5px; color: var(--text-muted); margin-top: 8px; }

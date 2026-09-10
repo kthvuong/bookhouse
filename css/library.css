@@ -1,0 +1,46 @@
+/* ============================================================
+   library.css — filter bar + grid/list view toggle
+   ============================================================ */
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+
+.filter-bar .filter-select {
+  padding: 8px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.filter-bar .filter-select:focus { outline: none; border-color: var(--accent); }
+
+.filter-bar .spacer { flex: 1; }
+
+.view-toggle {
+  display: inline-flex;
+  background: var(--surface-hover);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+}
+.view-toggle button {
+  border: none; background: transparent; cursor: pointer;
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted);
+}
+.view-toggle button.active { background: var(--surface); color: var(--accent-strong); box-shadow: var(--shadow-sm); }
+.view-toggle svg { width: 16px; height: 16px; }
+
+.result-count { font-size: 13px; color: var(--text-muted); margin-right: 4px; }
+
+.library-list { border-top: 1px solid var(--border); }

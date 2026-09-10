@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marginalia — Want to Read</title>
+<script src="js/theme-init.js"></script>
+<script src="js/auth-init.js"></script>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/library.css">
+<link rel="stylesheet" href="css/want-to-read.css">
+</head>
+<body>
+<script src="js/auth-gate.js"></script>
+<div id="header-root"></div>
+
+<main class="page-shell narrow">
+  <div class="tbr-hero">
+    <div>
+      <h1 class="page-title">Want to Read</h1>
+      <p class="page-subtitle">Drag to reorder. Filters clear the drag handles so ordering stays reliable.</p>
+    </div>
+    <button class="btn btn-primary" id="picker-btn">🎲 What should I read next?</button>
+  </div>
+
+  <div class="filter-bar">
+    <select class="filter-select" id="filter-genre"><option value="all">All genres</option></select>
+    <select class="filter-select" id="filter-author"><option value="all">All authors</option></select>
+    <select class="filter-select" id="filter-length">
+      <option value="all">Any length</option>
+      <option value="short">Short (&lt; 300 pg)</option>
+      <option value="medium">Medium (300–450 pg)</option>
+      <option value="long">Long (450+ pg)</option>
+    </select>
+    <span class="spacer"></span>
+    <span class="result-count" id="result-count"></span>
+  </div>
+
+  <div id="tbr-list"></div>
+</main>
+
+<div class="modal-overlay" id="picker-modal">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <h3>What should I read next?</h3>
+      <button class="btn btn-ghost btn-icon" id="picker-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row" id="picker-filters">
+        <div class="field"><label>Genre</label><select class="select" id="picker-genre"><option value="all">Any</option></select></div>
+        <div class="field"><label>Author</label><select class="select" id="picker-author"><option value="all">Any</option></select></div>
+        <div class="field"><label>Length</label><select class="select" id="picker-length">
+          <option value="all">Any</option>
+          <option value="short">Short (&lt; 300 pg)</option>
+          <option value="medium">Medium (300–450 pg)</option>
+          <option value="long">Long (450+ pg)</option>
+        </select></div>
+      </div>
+      <div id="picker-result" style="margin-top:20px;"></div>
+    </div>
+  </div>
+</div>
+
+<script src="js/storage.js"></script>
+<script src="js/books-api.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/add-book.js"></script>
+<script src="js/want-to-read.js"></script>
+</body>
+</html>
