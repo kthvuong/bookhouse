@@ -60,6 +60,7 @@
 
   --header-height: 72px;
   --max-width: 1180px;
+  --mobile-tabbar-height: 64px;
 }
 
 [data-theme="dark"] {

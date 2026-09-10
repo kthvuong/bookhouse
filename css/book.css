@@ -117,6 +117,10 @@
 .save-bar-hint { font-size: 13px; color: var(--text-muted); }
 .save-bar .btn-lg { flex-shrink: 0; }
 
+@media (max-width: 860px) {
+  .save-bar { bottom: var(--mobile-tabbar-height); }
+}
+
 @media (max-width: 720px) {
   .book-header { grid-template-columns: 130px 1fr; gap: var(--space-4); }
   .save-bar { flex-direction: row-reverse; justify-content: space-between; padding: 12px 16px; border-radius: 0; }

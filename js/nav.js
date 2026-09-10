@@ -37,6 +37,26 @@ const ICONS = {
   close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>',
 };
 
+/* Icons for the mobile bottom tab bar, keyed to NAV_ITEMS' keys. */
+const TAB_ICONS = {
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>',
+  library: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C4 4.67 4.67 4 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5v-13Z"/><path d="M20 5.5c0-.83-.67-1.5-1.5-1.5H13v16h5.5c.83 0 1.5-.67 1.5-1.5v-13Z"/></svg>',
+  explore: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.8 9.2l-2.1 5.5-5.5 2.1 2.1-5.5 5.5-2.1Z"/></svg>',
+  stats: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>',
+  settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15 1.65 1.65 0 0 0 3.17 14H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>',
+};
+
+function renderMobileTabBar(activeKey) {
+  return `
+    <nav class="mobile-tab-bar">
+      ${NAV_ITEMS.map((item) => `
+        <a href="${item.href}" class="tab-item ${item.key === activeKey ? 'active' : ''}">
+          ${TAB_ICONS[item.key] || ''}
+          <span>${item.label}</span>
+        </a>`).join('')}
+    </nav>`;
+}
+
 function currentTheme() {
   return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
 }
@@ -70,9 +90,9 @@ function initHeader(activeKey) {
         <button class="btn btn-ghost btn-icon search-toggle-btn" id="search-toggle-btn" aria-label="Search">${ICONS.search}</button>
         <button class="btn btn-primary btn-sm" id="add-book-btn">${ICONS.plus}<span>Add Book</span></button>
         <button class="btn btn-ghost btn-icon" id="theme-toggle-btn" title="Toggle theme" aria-label="Toggle theme">${currentTheme() === 'dark' ? ICONS.sun : ICONS.moon}</button>
-        <button class="nav-toggle" id="nav-toggle" aria-label="Menu">${ICONS.menu}</button>
       </div>
     </header>
+    ${renderMobileTabBar(activeKey)}
   `;
 
   document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
@@ -84,19 +104,6 @@ function initHeader(activeKey) {
       document.getElementById('global-search-input').focus();
     }
   });
-
-  const navEl = document.getElementById('main-nav');
-  const navToggle = document.getElementById('nav-toggle');
-  navToggle.addEventListener('click', () => {
-    const open = navEl.classList.toggle('open');
-    navToggle.innerHTML = open ? ICONS.close : ICONS.menu;
-  });
-  navEl.querySelectorAll('a').forEach((a) =>
-    a.addEventListener('click', () => {
-      navEl.classList.remove('open');
-      navToggle.innerHTML = ICONS.menu;
-    })
-  );
 
   document.getElementById('add-book-btn').addEventListener('click', () => {
     AddBookFlow.open();

@@ -439,6 +439,10 @@
 .toast-wrap {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
   z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: center;
+  transition: bottom var(--dur-med) var(--ease-out);
+}
+@media (max-width: 860px) {
+  .toast-wrap { bottom: calc(var(--mobile-tabbar-height) + 12px); }
 }
 .toast {
   background: var(--text-primary); color: var(--bg);
