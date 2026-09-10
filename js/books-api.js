@@ -175,7 +175,7 @@ const BooksAPI = (() => {
     name: 'googlebooks',
 
     async search(query, { limit = 20 } = {}) {
-      const url = withGoogleKey(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=${Math.min(limit, 40)}`);
+      const url = withGoogleKey(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=${Math.min(limit, 40)}&langRestrict=en`);
       const res = await fetch(url);
       if (!res.ok) throw new Error('Book search request failed');
       const data = await res.json();
@@ -185,7 +185,7 @@ const BooksAPI = (() => {
     async searchBySubject(subject, { limit = 12 } = {}) {
       try {
         const q = `subject:"${subject}"`;
-        const url = withGoogleKey(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=${Math.min(limit, 40)}&orderBy=relevance`);
+        const url = withGoogleKey(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=${Math.min(limit, 40)}&orderBy=relevance&langRestrict=en`);
         const res = await fetch(url);
         if (!res.ok) return [];
         const data = await res.json();
