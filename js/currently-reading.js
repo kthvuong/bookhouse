@@ -70,7 +70,7 @@
         const item = btn.closest('.cr-item');
         const entry = byId.get(item.dataset.entryId);
         const rating = await promptFinishedRating(entry.book);
-        const patch = { status: 'finished' };
+        const patch = { status: 'finished', ...finishedProgressPatch(entry.book) };
         if (rating) patch.rating = rating;
         await Storage.ReadingEntries.update(entry.id, patch);
         await render();

@@ -4,16 +4,6 @@
 
 #home-greeting { margin-top: 4px; }
 
-.shelf { position: relative; padding-bottom: 20px; }
-.shelf .rail { padding-bottom: 4px; }
-.shelf-ledge {
-  height: 3px;
-  margin: -2px 6px 0;
-  background: linear-gradient(90deg, transparent, var(--border-strong) 12%, var(--border-strong) 88%, transparent);
-  border-radius: 2px;
-  box-shadow: 0 8px 14px -6px hsl(var(--shadow-color) / 0.3);
-}
-
 .cr-card { width: 168px; }
 .cr-card .cover-wrap { aspect-ratio: 2/3; }
 .cr-card .progress-track { height: 5px; margin-top: 8px; }

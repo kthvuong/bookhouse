@@ -325,7 +325,10 @@
     return `
       <div class="save-bar">
         <span class="save-bar-hint" id="save-bar-hint">${isDirty() ? 'You have unsaved changes' : 'No changes to save'}</span>
-        <button class="btn btn-primary btn-lg" id="save-changes-btn" ${isDirty() ? '' : 'disabled'}>Save Changes</button>
+        <div class="save-bar-actions">
+          <button class="btn btn-ghost" id="cancel-changes-btn">Cancel</button>
+          <button class="btn btn-primary btn-lg" id="save-changes-btn" ${isDirty() ? '' : 'disabled'}>Save Changes</button>
+        </div>
       </div>`;
   }
 
@@ -356,6 +359,7 @@
         };
       }
       if (newStatus === 'finished') {
+        Object.assign(patch, finishedProgressPatch(book));
         const rating = await promptFinishedRating(book);
         if (rating) patch.rating = rating;
       }
@@ -381,6 +385,11 @@
       baseline = { ...staged };
       syncSaveBar();
       toast('Changes saved');
+    });
+
+    root.querySelector('#cancel-changes-btn').addEventListener('click', () => {
+      if (window.history.length > 1) window.history.back();
+      else window.location.href = 'library.html';
     });
 
     const descToggle = root.querySelector('#description-toggle');
@@ -409,7 +418,7 @@
     if (suggestFinish) {
       suggestFinish.addEventListener('click', async () => {
         const rating = await promptFinishedRating(book);
-        const patch = { status: 'finished' };
+        const patch = { status: 'finished', ...finishedProgressPatch(book) };
         if (rating) patch.rating = rating;
         await updateEntry(patch);
         await refresh();

@@ -323,6 +323,13 @@ function computeProgressStats(entry, progressUpdates, book) {
   };
 }
 
+/** Progress fields to merge into an entry patch whenever a book is marked Finished — always 100%, and the last page if the page count is known. */
+function finishedProgressPatch(book) {
+  const patch = { progressPercent: 100 };
+  if (book && book.pageCount) patch.currentPage = book.pageCount;
+  return patch;
+}
+
 /** Logs a progress update and updates the reading entry's current position. Shared by the book detail and Currently Reading pages. */
 async function logProgressUpdate(entry, book, { currentPage, percent, date }) {
   date = date || todayStr();

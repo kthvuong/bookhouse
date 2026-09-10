@@ -379,6 +379,7 @@ const AddBookFlow = (() => {
     const existingBooks = await Storage.Books.getAll();
     const dupe = existingBooks.find((b) => b.externalId === result.externalId);
     if (dupe) {
+      if (status === 'finished') Object.assign(entryPatch, finishedProgressPatch(dupe));
       const entry = await Storage.ReadingEntries.getByBookId(dupe.id);
       if (entry) return Storage.ReadingEntries.update(entry.id, entryPatch);
       entryPatch.bookId = dupe.id;
@@ -407,7 +408,8 @@ const AddBookFlow = (() => {
     if (blob) await Storage.Covers.save(book.id, blob, result.coverUrlLarge || result.coverUrl);
 
     entryPatch.bookId = book.id;
-    if (entryPatch.currentPage && book.pageCount) entryPatch.progressPercent = percentFromPages(entryPatch.currentPage, book.pageCount);
+    if (status === 'finished') Object.assign(entryPatch, finishedProgressPatch(book));
+    else if (entryPatch.currentPage && book.pageCount) entryPatch.progressPercent = percentFromPages(entryPatch.currentPage, book.pageCount);
     const entry = await Storage.ReadingEntries.create(entryPatch);
     if (entryPatch.currentPage) {
       await Storage.ProgressUpdates.add(entry.id, {
