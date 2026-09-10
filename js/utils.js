@@ -434,6 +434,64 @@ async function coverMarkup(book, className = '') {
   return coverFallbackHTML(book.title);
 }
 
+/** Samples a locally-cached cover blob's average color (small canvas read —
+ *  safe with no CORS issues since the image comes from our own blob: URL,
+ *  not a cross-origin request). Returns [r,g,b] or null if it can't. */
+function sampleImageColor(url) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const size = 24;
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, size, size);
+        const { data } = ctx.getImageData(0, 0, size, size);
+        let r = 0, g = 0, b = 0, count = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i + 3] < 200) continue;
+          r += data[i]; g += data[i + 1]; b += data[i + 2]; count++;
+        }
+        resolve(count ? [Math.round(r / count), Math.round(g / count), Math.round(b / count)] : null);
+      } catch (e) {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
+const HASH_PALETTE = [
+  [196, 109, 74], [111, 124, 83], [166, 124, 61], [96, 110, 140], [150, 90, 110],
+  [110, 140, 120], [180, 140, 90], [120, 100, 150], [170, 110, 90], [90, 130, 130],
+];
+
+/** A stable, non-random color per string — used so a book without a
+ *  sampleable cover still gets a consistent (not re-randomized-on-every-
+ *  render) tint instead of a plain gray. */
+function hashColor(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+  return HASH_PALETTE[hash % HASH_PALETTE.length];
+}
+
+/** A soft radial-glow CSS background for a book, tinted from its actual
+ *  cover colors when we can sample one, otherwise a stable hashed color. */
+async function coverGlowBackground(book) {
+  let rgb = null;
+  if (book && book.hasCachedCover) {
+    try {
+      const url = await Storage.Covers.getObjectUrl(book.id);
+      if (url) rgb = await sampleImageColor(url);
+    } catch (e) {}
+  }
+  if (!rgb) rgb = hashColor((book && (book.title || book.id)) || 'book');
+  const [r, g, b] = rgb;
+  return `radial-gradient(circle at 30% 25%, rgba(${r},${g},${b},0.38), rgba(${r},${g},${b},0.1) 75%)`;
+}
+
 const STATUS_COLOR = {
   want_to_read: 'var(--gold)',
   currently_reading: 'var(--accent)',

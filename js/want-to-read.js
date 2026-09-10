@@ -8,7 +8,8 @@
   document.getElementById('subnav-root').innerHTML = renderLibrarySubnav('want-to-read');
 
   const list = document.getElementById('tbr-list');
-  const state = { genre: 'all', author: 'all', length: 'all' };
+  const grid = document.getElementById('tbr-grid');
+  const state = { genre: 'all', author: 'all', length: 'all', view: localStorage.getItem('tbrView') || 'list' };
 
   let entries = [];
 
@@ -50,18 +51,62 @@
 
   const filtersActive = () => state.genre !== 'all' || state.author !== 'all' || state.length !== 'all';
 
+  function setView(view) {
+    state.view = view;
+    localStorage.setItem('tbrView', view);
+    document.getElementById('view-grid-btn').classList.toggle('active', view === 'grid');
+    document.getElementById('view-list-btn').classList.toggle('active', view === 'list');
+    grid.hidden = view !== 'grid';
+    list.hidden = view !== 'list';
+    document.getElementById('tbr-subtitle').textContent = view === 'grid'
+      ? 'A shelf of everything you\'re planning to read next.'
+      : 'Drag to reorder. Filters clear the drag handles so ordering stays reliable.';
+    render();
+  }
+  document.getElementById('view-grid-btn').addEventListener('click', () => setView('grid'));
+  document.getElementById('view-list-btn').addEventListener('click', () => setView('list'));
+
   async function render() {
     const filtered = applyFilters(entries, state);
     document.getElementById('result-count').textContent = `${filtered.length} book${filtered.length === 1 ? '' : 's'}`;
 
     if (!filtered.length) {
-      list.innerHTML = `<div class="empty-state"><div class="icon">📚</div><h3>Nothing here</h3><p>${entries.length ? 'No books match these filters.' : 'Search for a book above to add it to your Want to Read list.'}</p></div>`;
+      const emptyHtml = `<div class="empty-state"><div class="icon">📚</div><h3>Nothing here</h3><p>${entries.length ? 'No books match these filters.' : 'Search for a book above to add it to your Want to Read list.'}</p></div>`;
+      list.innerHTML = emptyHtml;
+      grid.innerHTML = emptyHtml;
       return;
     }
 
-    const draggable = !filtersActive();
-    list.innerHTML = (await Promise.all(filtered.map((e) => rowHTML(e, draggable)))).join('');
-    wireRowEvents(draggable);
+    if (state.view === 'grid') {
+      grid.innerHTML = (await Promise.all(filtered.map(gridCardHTML))).join('');
+      wireGridEvents();
+    } else {
+      const draggable = !filtersActive();
+      list.innerHTML = (await Promise.all(filtered.map((e) => rowHTML(e, draggable)))).join('');
+      wireRowEvents(draggable);
+    }
+  }
+
+  async function gridCardHTML(entry) {
+    const book = entry.book;
+    const cover = await coverMarkup(book);
+    const bg = await coverGlowBackground(book);
+    const genres = (book.genres || []).filter((g) => !g.includes(':')).slice(0, 2);
+    const blurb = book.description ? truncate(book.description.replace(/\s+/g, ' ').trim(), 92) : '';
+    return `
+      <div class="tbr-glow-card" data-book-id="${book.id}">
+        <div class="tbr-glow-tile" style="background:${bg};">
+          <div class="tbr-glow-cover">${cover}</div>
+        </div>
+        <div class="tbr-glow-title">${escapeHtml(book.title)}</div>
+        <div class="tbr-glow-author">${escapeHtml(authorList(book.authors))}</div>
+        ${blurb ? `<p class="tbr-glow-blurb">${escapeHtml(blurb)}</p>` : ''}
+        ${genres.length ? `<div class="chip-row">${genres.map((g) => `<span class="chip">${escapeHtml(g)}</span>`).join('')}</div>` : ''}
+      </div>`;
+  }
+
+  function wireGridEvents() {
+    wireBookCardClicks(grid);
   }
 
   async function rowHTML(entry, draggable) {
@@ -70,7 +115,7 @@
     return `
       <div class="tbr-row" data-entry-id="${entry.id}" ${draggable ? 'draggable="true"' : ''}>
         <span class="drag-handle ${draggable ? '' : 'disabled'}">⠿</span>
-        <a href="book.html?id=${book.id}" style="position:relative;display:block;width:42px;height:62px;flex-shrink:0;">${cover}</a>
+        <a href="book.html?id=${book.id}" style="position:relative;display:block;width:40px;height:58px;flex-shrink:0;">${cover}</a>
         <div class="info">
           <a href="book.html?id=${book.id}"><div class="title">${escapeHtml(book.title)}</div></a>
           <div class="author">${escapeHtml(authorList(book.authors))}</div>
@@ -78,9 +123,9 @@
         </div>
         <span class="pages-label">${book.pageCount ? book.pageCount + ' pg' : ''}</span>
         <select class="priority-select priority-${entry.priority}" data-priority-select>
-          <option value="high" ${entry.priority === 'high' ? 'selected' : ''}>High priority</option>
-          <option value="normal" ${entry.priority === 'normal' ? 'selected' : ''}>Normal priority</option>
-          <option value="low" ${entry.priority === 'low' ? 'selected' : ''}>Low priority</option>
+          <option value="high" ${entry.priority === 'high' ? 'selected' : ''}>High</option>
+          <option value="normal" ${entry.priority === 'normal' ? 'selected' : ''}>Normal</option>
+          <option value="low" ${entry.priority === 'low' ? 'selected' : ''}>Low</option>
         </select>
       </div>`;
   }
@@ -172,5 +217,5 @@
 
   await load();
   refreshFilterOptions();
-  await render();
+  setView(state.view);
 })();

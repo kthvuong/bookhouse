@@ -4,25 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Want to Read</title>
-<script src="js/config.js?v=12"></script>
-<script src="js/theme-init.js?v=12"></script>
-<script src="js/auth-init.js?v=12"></script>
-<link rel="stylesheet" href="css/base.css?v=12">
-<link rel="stylesheet" href="css/layout.css?v=12">
-<link rel="stylesheet" href="css/components.css?v=12">
-<link rel="stylesheet" href="css/library.css?v=12">
-<link rel="stylesheet" href="css/want-to-read.css?v=12">
+<script src="js/config.js?v=15"></script>
+<script src="js/theme-init.js?v=15"></script>
+<script src="js/auth-init.js?v=15"></script>
+<link rel="stylesheet" href="css/base.css?v=15">
+<link rel="stylesheet" href="css/layout.css?v=15">
+<link rel="stylesheet" href="css/components.css?v=15">
+<link rel="stylesheet" href="css/library.css?v=15">
+<link rel="stylesheet" href="css/want-to-read.css?v=15">
 </head>
 <body>
-<script src="js/auth-gate.js?v=12"></script>
+<script src="js/auth-gate.js?v=15"></script>
 <div id="header-root"></div>
-<div class="page-shell narrow" style="padding-top:20px;padding-bottom:0;"><div id="subnav-root"></div></div>
+<div class="page-shell wide" style="padding-top:20px;padding-bottom:0;"><div id="subnav-root"></div></div>
 
-<main class="page-shell narrow">
+<main class="page-shell wide">
   <div class="tbr-hero">
     <div>
       <h1 class="page-title">Want to Read</h1>
-      <p class="page-subtitle">Drag to reorder. Filters clear the drag handles so ordering stays reliable.</p>
+      <p class="page-subtitle" id="tbr-subtitle">Drag to reorder. Filters clear the drag handles so ordering stays reliable.</p>
     </div>
     <button class="btn btn-primary" id="picker-btn">🎲 What should I read next?</button>
   </div>
@@ -38,8 +38,17 @@
     </select>
     <span class="spacer"></span>
     <span class="result-count" id="result-count"></span>
+    <div class="view-toggle">
+      <button id="view-grid-btn" title="Grid view" aria-label="Grid view">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      </button>
+      <button id="view-list-btn" class="active" title="List view" aria-label="List view">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
   </div>
 
+  <div id="tbr-grid" class="tbr-glow-grid" hidden></div>
   <div id="tbr-list"></div>
 </main>
 
@@ -65,12 +74,12 @@
   </div>
 </div>
 
-<script src="js/storage.js?v=12"></script>
-<script src="js/books-api.js?v=12"></script>
-<script src="js/utils.js?v=12"></script>
-<script src="js/nav.js?v=12"></script>
-<script src="js/add-book.js?v=12"></script>
-<script src="js/book-preview.js?v=12"></script>
-<script src="js/want-to-read.js?v=12"></script>
+<script src="js/storage.js?v=15"></script>
+<script src="js/books-api.js?v=15"></script>
+<script src="js/utils.js?v=15"></script>
+<script src="js/nav.js?v=15"></script>
+<script src="js/add-book.js?v=15"></script>
+<script src="js/book-preview.js?v=15"></script>
+<script src="js/want-to-read.js?v=15"></script>
 </body>
 </html>
