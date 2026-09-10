@@ -28,6 +28,16 @@ function renderLibrarySubnav(activeKey) {
     </nav>`;
 }
 
+/* A tiny cottage with a round window — keeps the "dot" the old plain
+   circle mark had, just folded into an actual little house now. */
+const BRAND_MARK_SVG = `
+  <svg viewBox="0 0 32 32" width="24" height="24" aria-hidden="true" focusable="false">
+    <path d="M4 16.5 L16 5.5 L28 16.5" fill="none" style="stroke:var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="7.5" y="15.5" width="17" height="12" rx="3.5" style="fill:var(--accent-soft)"/>
+    <rect x="13.2" y="20.5" width="5.6" height="7" rx="1.8" style="fill:var(--accent)"/>
+    <circle cx="16" cy="11.2" r="2" style="fill:var(--gold)"/>
+  </svg>`;
+
 const ICONS = {
   search: '<svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
   sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8L6 18M18 6l1.8-1.8"/></svg>',
@@ -79,7 +89,7 @@ function initHeader(activeKey) {
 
   root.innerHTML = `
     <header class="app-header">
-      <a class="brand" href="index.html"><span class="brand-mark">&#9679;</span>${APP_NAME}</a>
+      <a class="brand" href="index.html"><span class="brand-mark">${BRAND_MARK_SVG}</span>${APP_NAME}</a>
       <nav class="main-nav" id="main-nav">${navLinks}</nav>
       <div class="header-actions">
         <div class="search-box" id="search-box">

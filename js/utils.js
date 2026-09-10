@@ -440,6 +440,13 @@ async function coverMarkup(book, className = '') {
 function sampleImageColor(url) {
   return new Promise((resolve) => {
     const img = new Image();
+    // Needed for remote (not-yet-cached) covers so the canvas isn't
+    // "tainted" by a cross-origin read; harmless no-op for blob: URLs.
+    // If the remote host doesn't send CORS headers the image simply
+    // fails to load here (onerror below), and we fall back gracefully —
+    // the actual cover shown on the card is a separate plain <img> and
+    // is never affected either way.
+    img.crossOrigin = 'anonymous';
     img.onload = () => {
       try {
         const size = 24;
@@ -481,13 +488,17 @@ function hashColor(str) {
  *  cover colors when we can sample one, otherwise a stable hashed color. */
 async function coverGlowBackground(book) {
   let rgb = null;
+  let sampleUrl = null;
   if (book && book.hasCachedCover) {
-    try {
-      const url = await Storage.Covers.getObjectUrl(book.id);
-      if (url) rgb = await sampleImageColor(url);
-    } catch (e) {}
+    try { sampleUrl = await Storage.Covers.getObjectUrl(book.id); } catch (e) {}
   }
-  if (!rgb) rgb = hashColor((book && (book.title || book.id)) || 'book');
+  // Not-yet-added books (e.g. Explore recommendations) have no cached
+  // blob yet — sample straight from the remote cover URL instead.
+  if (!sampleUrl && book && book.coverUrl) sampleUrl = book.coverUrl;
+  if (sampleUrl) {
+    try { rgb = await sampleImageColor(sampleUrl); } catch (e) {}
+  }
+  if (!rgb) rgb = hashColor((book && (book.title || book.id || book.externalId)) || 'book');
   const [r, g, b] = rgb;
   return `radial-gradient(circle at 30% 25%, rgba(${r},${g},${b},0.38), rgba(${r},${g},${b},0.1) 75%)`;
 }

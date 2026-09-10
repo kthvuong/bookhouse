@@ -26,7 +26,14 @@
     overlay.className = 'auth-gate';
     overlay.innerHTML = `
       <div class="auth-gate-card">
-        <div class="auth-gate-mark">&#9679;</div>
+        <div class="auth-gate-mark">
+          <svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true" focusable="false">
+            <path d="M4 16.5 L16 5.5 L28 16.5" fill="none" style="stroke:var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="7.5" y="15.5" width="17" height="12" rx="3.5" style="fill:var(--accent-soft)"/>
+            <rect x="13.2" y="20.5" width="5.6" height="7" rx="1.8" style="fill:var(--accent)"/>
+            <circle cx="16" cy="11.2" r="2" style="fill:var(--gold)"/>
+          </svg>
+        </div>
         <h1 class="serif">${APP_NAME}</h1>
         ${mode === 'setup'
           ? `<p>Set a 4-digit PIN to lock this journal to just you.</p>

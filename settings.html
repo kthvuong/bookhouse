@@ -4,16 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Settings</title>
-<script src="js/config.js?v=15"></script>
-<script src="js/theme-init.js?v=15"></script>
-<script src="js/auth-init.js?v=15"></script>
-<link rel="stylesheet" href="css/base.css?v=15">
-<link rel="stylesheet" href="css/layout.css?v=15">
-<link rel="stylesheet" href="css/components.css?v=15">
-<link rel="stylesheet" href="css/settings.css?v=15">
+<script src="js/config.js?v=16"></script>
+<script src="js/theme-init.js?v=16"></script>
+<script src="js/auth-init.js?v=16"></script>
+<link rel="stylesheet" href="css/base.css?v=16">
+<link rel="stylesheet" href="css/layout.css?v=16">
+<link rel="stylesheet" href="css/components.css?v=16">
+<link rel="stylesheet" href="css/settings.css?v=16">
 </head>
 <body>
-<script src="js/auth-gate.js?v=15"></script>
+<script src="js/auth-gate.js?v=16"></script>
 <div id="header-root"></div>
 
 <main class="page-shell narrow">
@@ -64,6 +64,24 @@
   </section>
 
   <section class="settings-section">
+    <h2>Book Search</h2>
+    <p class="desc">Cover art and search results come from Google Books, with Open Library as a backup. Google's free search has a small shared quota that can run out under heavy public traffic — adding your own free API key gives you a private quota so search stays reliable.</p>
+    <div class="form-row">
+      <div class="field" style="flex:1;min-width:220px;"><label>Google Books API key (optional)</label><input class="input" id="google-key-input" type="text" placeholder="Paste your API key here" autocomplete="off"></div>
+      <div class="field" style="align-self:flex-end;"><button class="btn btn-primary" id="save-google-key-btn">Save Key</button></div>
+    </div>
+    <p class="text-muted" id="google-key-hint" style="font-size:12.5px;margin-top:4px;"></p>
+    <details style="margin-top:10px;">
+      <summary style="cursor:pointer;font-size:13px;color:var(--text-secondary);">How do I get a free key?</summary>
+      <ol style="font-size:13px;color:var(--text-secondary);margin:8px 0 0 18px;line-height:1.7;">
+        <li>Go to the <a href="https://console.cloud.google.com/apis/library/books.googleapis.com" target="_blank" rel="noopener">Google Cloud Console's Books API page</a> and click "Enable" (create a project first if prompted — it's free).</li>
+        <li>Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Credentials</a> and click "Create Credentials" → "API key".</li>
+        <li>Copy the key it gives you and paste it above. Optionally click "Restrict key" and limit it to the Books API only.</li>
+      </ol>
+    </details>
+  </section>
+
+  <section class="settings-section">
     <h2>Backup &amp; Export</h2>
     <p class="desc">Your reading data lives entirely in this browser. Back it up regularly — it never depends on Open Library staying available.</p>
     <div class="settings-actions">
@@ -86,12 +104,12 @@
   </section>
 </main>
 
-<script src="js/storage.js?v=15"></script>
-<script src="js/books-api.js?v=15"></script>
-<script src="js/utils.js?v=15"></script>
-<script src="js/nav.js?v=15"></script>
-<script src="js/add-book.js?v=15"></script>
-<script src="js/book-preview.js?v=15"></script>
-<script src="js/settings.js?v=15"></script>
+<script src="js/storage.js?v=16"></script>
+<script src="js/books-api.js?v=16"></script>
+<script src="js/utils.js?v=16"></script>
+<script src="js/nav.js?v=16"></script>
+<script src="js/add-book.js?v=16"></script>
+<script src="js/book-preview.js?v=16"></script>
+<script src="js/settings.js?v=16"></script>
 </body>
 </html>

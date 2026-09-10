@@ -88,6 +88,24 @@
     toast('PIN protection removed');
   });
 
+  // ---- Google Books API key ----
+  const googleKeyInput = document.getElementById('google-key-input');
+  const googleKeyHint = document.getElementById('google-key-hint');
+  function refreshGoogleKeyHint() {
+    googleKeyHint.textContent = localStorage.getItem('mg_google_books_key')
+      ? 'Using your personal API key for book search.'
+      : 'No key set — using the shared free quota (may occasionally hit limits).';
+  }
+  googleKeyInput.value = localStorage.getItem('mg_google_books_key') || '';
+  refreshGoogleKeyHint();
+  document.getElementById('save-google-key-btn').addEventListener('click', () => {
+    const key = googleKeyInput.value.trim();
+    if (key) localStorage.setItem('mg_google_books_key', key);
+    else localStorage.removeItem('mg_google_books_key');
+    refreshGoogleKeyHint();
+    toast(key ? 'API key saved' : 'API key removed');
+  });
+
   // ---- theme ----
   const themeBtn = document.getElementById('settings-theme-toggle');
   function refreshThemeLabel() {

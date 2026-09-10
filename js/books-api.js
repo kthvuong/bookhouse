@@ -109,6 +109,15 @@ const BooksAPI = (() => {
     },
   };
 
+  function googleApiKey() {
+    try { return (localStorage.getItem('mg_google_books_key') || '').trim(); } catch { return ''; }
+  }
+
+  function withGoogleKey(url) {
+    const key = googleApiKey();
+    return key ? `${url}&key=${encodeURIComponent(key)}` : url;
+  }
+
   function sanitizeGoogleCoverUrl(url) {
     if (!url) return '';
     return url.replace(/^http:/, 'https:').replace(/&edge=curl/, '');
@@ -166,7 +175,7 @@ const BooksAPI = (() => {
     name: 'googlebooks',
 
     async search(query, { limit = 20 } = {}) {
-      const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=${Math.min(limit, 40)}`;
+      const url = withGoogleKey(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=${Math.min(limit, 40)}`);
       const res = await fetch(url);
       if (!res.ok) throw new Error('Book search request failed');
       const data = await res.json();
@@ -176,7 +185,7 @@ const BooksAPI = (() => {
     async searchBySubject(subject, { limit = 12 } = {}) {
       try {
         const q = `subject:"${subject}"`;
-        const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=${Math.min(limit, 40)}&orderBy=relevance`;
+        const url = withGoogleKey(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=${Math.min(limit, 40)}&orderBy=relevance`);
         const res = await fetch(url);
         if (!res.ok) return [];
         const data = await res.json();
@@ -190,7 +199,7 @@ const BooksAPI = (() => {
       // Search results already embed description/categories, but this
       // is used as a fallback (and for results fetched without them).
       try {
-        const res = await fetch(`https://www.googleapis.com/books/v1/volumes/${encodeURIComponent(volumeId)}`);
+        const res = await fetch(withGoogleKey(`https://www.googleapis.com/books/v1/volumes/${encodeURIComponent(volumeId)}?fields=volumeInfo`));
         if (!res.ok) return { description: '', genres: [] };
         const data = await res.json();
         const info = data.volumeInfo || {};

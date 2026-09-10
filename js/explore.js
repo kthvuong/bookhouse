@@ -190,9 +190,12 @@
     const cover = item.coverUrl
       ? `<img src="${escapeHtml(item.coverUrl)}" alt="">`
       : coverFallbackHTML(item.title);
+    const bg = await coverGlowBackground(item);
     return `
       <div class="rec-card" data-external-id="${escapeHtml(item.externalId)}">
-        <div class="cover-wrap" data-open-preview>${cover}</div>
+        <div class="rec-glow-tile" style="background:${bg};" data-open-preview>
+          <div class="cover-wrap">${cover}</div>
+        </div>
         <div class="rec-title" data-open-preview>${escapeHtml(item.title)}</div>
         <div class="rec-author">${escapeHtml(authorList(item.authors))}</div>
         <div class="rec-reason">${escapeHtml(item.reason)}</div>

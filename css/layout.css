@@ -26,7 +26,9 @@
   flex-shrink: 0;
   color: var(--text-primary);
 }
-.brand .brand-mark { color: var(--accent); font-size: 22px; }
+.brand .brand-mark { display: inline-flex; align-items: center; }
+.brand .brand-mark svg { display: block; transition: transform var(--dur-med) var(--ease-out); }
+.brand:hover .brand-mark svg { transform: translateY(-1px) rotate(-4deg); }
 
 .main-nav {
   display: flex;
