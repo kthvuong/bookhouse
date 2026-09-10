@@ -40,8 +40,9 @@ const AddBookFlow = (() => {
     setTimeout(() => { modal.innerHTML = ''; modal.className = 'modal wide'; }, 200);
   }
 
-  function open() {
+  function open(query) {
     ensureModal();
+    if (query) lastQuery = query;
     renderSearchStep();
     overlay.classList.add('open');
     setTimeout(() => modal.querySelector('#ab-search-input')?.focus(), 50);
