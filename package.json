@@ -3,6 +3,6 @@
   "private": true,
   "description": "A personal, single-user reading tracker. Static site with one Vercel serverless function for cross-device sync.",
   "dependencies": {
-    "@vercel/kv": "^2.0.0"
+    "@upstash/redis": "^1.34.0"
   }
 }
