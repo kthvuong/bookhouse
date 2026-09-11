@@ -130,7 +130,7 @@
     const remainingCount = items.length - RAIL_INITIAL;
     const cardsHtml = (await Promise.all(visible.map(cardHTML))).join('');
     const tileHtml = (remainingCount > 0 || fetchNext)
-      ? `<button type="button" class="show-more-tile" data-show-more="${railId}"><span class="count">${remainingCount > 0 ? '+' + remainingCount : '···'}</span><span>Show more</span></button>`
+      ? `<button type="button" class="show-more-tile" data-show-more="${railId}"><span class="show-more-circle">→</span><span class="show-more-label">See more</span></button>`
       : '';
     return `<div class="rail explore-rail" id="${railId}">${cardsHtml}${tileHtml}</div>`;
   }
@@ -213,7 +213,7 @@
     let shownCount = railEl.querySelectorAll('.book-card').length;
 
     if (shownCount >= state.items.length && state.fetchNext) {
-      if (tile) tile.querySelector('.count').textContent = '···';
+      if (tile) tile.querySelector('.show-more-label').textContent = 'Loading…';
       let more = [];
       try { more = await state.fetchNext(); } catch (e) { more = []; }
       if (more.length) state.items.push(...more);
@@ -232,10 +232,9 @@
     wireCardClicks(railEl);
 
     shownCount += nextBatch.length;
-    const remaining = state.items.length - shownCount;
+    const stillMore = shownCount < state.items.length || !!state.fetchNext;
     if (tile) {
-      if (remaining > 0) tile.querySelector('.count').textContent = `+${remaining}`;
-      else if (state.fetchNext) tile.querySelector('.count').textContent = '···';
+      if (stillMore) tile.querySelector('.show-more-label').textContent = 'See more';
       else tile.remove();
     }
   }
