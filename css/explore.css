@@ -1,55 +1,23 @@
 /* ============================================================
-   explore.css — personalized recommendation shelves
+   explore.css — book discovery: genre selector + carousels
    ============================================================ */
+
+.genre-chip-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: var(--space-7);
+  scrollbar-width: none;
+}
+.genre-chip-row::-webkit-scrollbar { display: none; }
+.genre-chip { flex-shrink: 0; cursor: pointer; }
 
 .explore-section { margin-bottom: var(--space-8); }
 .explore-section-heading { margin-bottom: var(--space-4); }
 .explore-section-heading h2 { font-size: 22px; }
 .explore-section-heading p { color: var(--text-secondary); font-size: 13.5px; margin-top: 4px; }
 
-.rec-rail {
-  display: flex;
-  gap: var(--space-5);
-  overflow-x: auto;
-  padding-bottom: 10px;
-  scrollbar-width: none;
-}
-.rec-rail::-webkit-scrollbar { display: none; }
-
-.rec-card {
-  flex-shrink: 0;
-  width: 168px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.rec-glow-tile {
-  aspect-ratio: 1 / 1.08;
-  border-radius: var(--radius-lg);
-  display: flex; align-items: center; justify-content: center;
-  padding: 15%;
-  cursor: pointer;
-  transition: transform var(--dur-med) var(--ease-out);
-}
-.rec-glow-tile:hover { transform: translateY(-4px); }
-.rec-card .cover-wrap {
-  position: relative;
-  width: 100%; height: 100%;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  box-shadow: var(--shadow-lg);
-  background: var(--surface-hover);
-}
-.rec-card .rec-title { font-size: 13.5px; font-weight: 600; line-height: 1.3; cursor: pointer; margin-top: 2px; }
-.rec-card .rec-author { font-size: 12px; color: var(--text-muted); }
-.rec-card .rec-reason {
-  font-size: 11.5px; color: var(--accent-strong);
-  font-style: italic; line-height: 1.4;
-}
-.rec-card .rec-add-btn {
-  margin-top: 2px; align-self: flex-start;
-  padding: 6px 12px; font-size: 12px;
-}
-.rec-card .rec-add-btn.added { color: var(--sage); border-color: var(--sage-soft); background: var(--sage-soft); }
+.explore-rail .book-card { width: 150px; }
 
 .explore-empty { text-align: center; padding: var(--space-9) var(--space-5); }

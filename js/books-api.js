@@ -52,11 +52,11 @@ const BooksAPI = (() => {
       });
     },
 
-    async searchBySubject(subject, { limit = 12 } = {}) {
+    async searchBySubject(subject, { limit = 12, sort = 'rating' } = {}) {
       const slug = subject.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
       if (!slug) return [];
       try {
-        const res = await fetch(`https://openlibrary.org/subjects/${encodeURIComponent(slug)}.json?limit=${limit}&sort=rating`);
+        const res = await fetch(`https://openlibrary.org/subjects/${encodeURIComponent(slug)}.json?limit=${limit}&sort=${encodeURIComponent(sort)}`);
         if (!res.ok) return [];
         const data = await res.json();
         return (data.works || []).map((w) => ({
@@ -70,6 +70,30 @@ const BooksAPI = (() => {
           isbn13: '',
           coverUrl: coverUrlFromId(w.cover_id, 'M'),
           coverUrlLarge: coverUrlFromId(w.cover_id, 'L'),
+          pageCount: null,
+          editionCount: w.edition_count || null,
+        }));
+      } catch {
+        return [];
+      }
+    },
+
+    async trending({ limit = 16 } = {}) {
+      try {
+        const res = await fetch(`https://openlibrary.org/trending/weekly.json?limit=${limit}`);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data.works || []).map((w) => ({
+          externalId: w.key,
+          source: 'openlibrary',
+          title: w.title || 'Untitled',
+          subtitle: '',
+          authors: w.author_name || [],
+          firstPublishYear: w.first_publish_year || null,
+          isbn10: '',
+          isbn13: '',
+          coverUrl: coverUrlFromId(w.cover_i, 'M'),
+          coverUrlLarge: coverUrlFromId(w.cover_i, 'L'),
           pageCount: null,
           editionCount: w.edition_count || null,
         }));
@@ -164,6 +188,7 @@ const BooksAPI = (() => {
       editionCount: null,
       description: stripMarkdown(info.description || ''),
       genres: extractGoogleGenres(info.categories),
+      averageRating: info.averageRating || null,
     };
   }
 
@@ -182,17 +207,20 @@ const BooksAPI = (() => {
       return (data.items || []).map(mapGoogleVolume);
     },
 
-    async searchBySubject(subject, { limit = 12 } = {}) {
-      try {
-        const q = `subject:"${subject}"`;
-        const url = withGoogleKey(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=${Math.min(limit, 40)}&orderBy=relevance&langRestrict=en`);
-        const res = await fetch(url);
-        if (!res.ok) return [];
-        const data = await res.json();
-        return (data.items || []).map(mapGoogleVolume);
-      } catch {
-        return [];
-      }
+    async searchBySubject(subject, { limit = 12, sort = 'rating' } = {}) {
+      const q = `subject:"${subject}"`;
+      const orderBy = sort === 'new' ? 'newest' : 'relevance';
+      const url = withGoogleKey(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=${Math.min(limit, 40)}&orderBy=${orderBy}&langRestrict=en`);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Subject search request failed');
+      const data = await res.json();
+      return (data.items || []).map(mapGoogleVolume);
+    },
+
+    // Google Books has no trending endpoint — always defer to Open
+    // Library's real trending data via withFallback below.
+    async trending() {
+      throw new Error('Trending not supported by Google Books');
     },
 
     async getDetails(volumeId) {
@@ -246,6 +274,7 @@ const BooksAPI = (() => {
     providerName: () => activeProvider.name,
     search: (query, opts) => withFallback('search', [query, opts]),
     searchBySubject: (subject, opts) => withFallback('searchBySubject', [subject, opts]),
+    trending: (opts) => withFallback('trending', [opts]),
     getDetails: (externalId) => activeProvider.getDetails(externalId),
     fetchCoverBlob: (url) => activeProvider.fetchCoverBlob(url),
   };

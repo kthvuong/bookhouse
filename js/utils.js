@@ -521,7 +521,7 @@ async function bookCardHTML(entry, { showProgress = false } = {}) {
     <div class="book-card fade-in" data-book-id="${book.id}">
       <div class="cover-wrap">
         ${cover}
-        <span class="status-dot" style="background:${STATUS_COLOR[entry.status] || 'var(--text-muted)'}"></span>
+        ${entry.status ? `<span class="status-dot" style="background:${STATUS_COLOR[entry.status] || 'var(--text-muted)'}"></span>` : ''}
         ${showSliver ? `<span class="progress-sliver"><span style="width:${entry.progressPercent || 0}%"></span></span>` : ''}
       </div>
       <div class="title">${escapeHtml(truncate(book.title, 60))}</div>

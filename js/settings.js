@@ -55,20 +55,10 @@
   pinHint.textContent = localStorage.getItem('mg_pw_hash') ? 'A PIN is currently set on this device.' : 'No PIN set on this device yet.';
 
   const newPin = mountPinInput(document.getElementById('new-pin-row'), {
-    onComplete: () => confirmPin.focus(),
-  });
-  const confirmPin = mountPinInput(document.getElementById('confirm-pin-row'), {
-    onComplete: async (confirmValue) => {
-      if (newPin.value() !== confirmValue) {
-        toast("PINs don't match");
-        newPin.shake(); confirmPin.shake();
-        newPin.clear(); confirmPin.clear();
-        newPin.focus();
-        return;
-      }
-      localStorage.setItem('mg_pw_hash', await sha256Hex(newPin.value()));
+    onComplete: async (value) => {
+      localStorage.setItem('mg_pw_hash', await sha256Hex(value));
       localStorage.setItem('mg_authed', '1');
-      newPin.clear(); confirmPin.clear();
+      newPin.clear();
       pinHint.textContent = 'A PIN is currently set on this device.';
       toast('PIN set');
     },

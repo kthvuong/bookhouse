@@ -37,10 +37,7 @@
         <h1 class="serif">${APP_NAME}</h1>
         ${mode === 'setup'
           ? `<p>Set a 4-digit PIN to lock this journal to just you.</p>
-             <div class="eyebrow" style="margin-top:16px;">Enter PIN</div>
-             <div class="pin-input-row" id="pin-row-1" style="margin-top:8px;"></div>
-             <div class="eyebrow" style="margin-top:16px;">Confirm PIN</div>
-             <div class="pin-input-row" id="pin-row-2" style="margin-top:8px;"></div>`
+             <div class="pin-input-row" id="pin-row-1" style="margin-top:16px;"></div>`
           : `<p>This is a private reading journal.</p>
              <div class="pin-input-row" id="pin-row-1" style="margin-top:16px;"></div>`
         }
@@ -71,25 +68,13 @@
     }
 
     if (mode === 'setup') {
-      const row2 = overlay.querySelector('#pin-row-2');
-      const pin1 = mountPinInput(overlay.querySelector('#pin-row-1'), {
-        onComplete: () => pin2.focus(),
-      });
-      const pin2 = mountPinInput(row2, {
-        onComplete: async (confirmValue) => {
-          if (pin1.value() !== confirmValue) {
-            showError("PINs don't match — try again.");
-            pin1.shake(); pin2.shake();
-            pin1.clear(); pin2.clear();
-            pin1.focus();
-            return;
-          }
-          err.hidden = true;
-          localStorage.setItem('mg_pw_hash', await sha256Hex(pin1.value()));
+      const pin = mountPinInput(overlay.querySelector('#pin-row-1'), {
+        onComplete: async (value) => {
+          localStorage.setItem('mg_pw_hash', await sha256Hex(value));
           unlock();
         },
       });
-      pin1.focus();
+      pin.focus();
     } else {
       const pin = mountPinInput(overlay.querySelector('#pin-row-1'), {
         onComplete: async (value) => {
