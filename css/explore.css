@@ -14,9 +14,28 @@
 .genre-chip { flex-shrink: 0; cursor: pointer; }
 
 .explore-section { margin-bottom: var(--space-8); }
-.explore-section-heading { margin-bottom: var(--space-4); }
+.explore-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
 .explore-section-heading h2 { font-size: 22px; }
 .explore-section-heading p { color: var(--text-secondary); font-size: 13.5px; margin-top: 4px; }
+
+.rail-nav { display: flex; gap: 8px; flex-shrink: 0; }
+.rail-nav-btn {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid var(--border-strong); background: var(--surface);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary); font-size: 18px; line-height: 1;
+}
+.rail-nav-btn:hover { background: var(--surface-hover); }
+
+@media (max-width: 860px) {
+  .rail-nav { display: none; }
+}
 
 .explore-rail .book-card { width: 150px; }
 

@@ -108,10 +108,14 @@
 
   // Shows the first RAIL_INITIAL cards; anything beyond that sits behind a
   // "show more" tile at the end of the rail (same items already fetched —
-  // clicking it just reveals more, no extra network call).
+  // clicking it just reveals more, no extra network call). Tracks the id
+  // of the rail it just built so the following sectionHTML() call (always
+  // made inline, right after awaiting this) can wire up nav arrows for it.
+  let lastRailId = null;
   async function railHTML(items) {
-    if (!items.length) return '';
+    if (!items.length) { lastRailId = null; return ''; }
     const railId = `rail-${railCounter++}`;
+    lastRailId = railId;
     railItemsById.set(railId, items);
     const visible = items.slice(0, RAIL_INITIAL);
     const remainingCount = items.length - RAIL_INITIAL;
@@ -124,14 +128,35 @@
 
   function sectionHTML(title, subtitle, innerHtml) {
     if (!innerHtml) return '';
+    const railId = lastRailId;
+    const navHtml = railId
+      ? `<div class="rail-nav">
+          <button type="button" class="rail-nav-btn" data-rail-scroll="${railId}" data-dir="-1" aria-label="Scroll left">‹</button>
+          <button type="button" class="rail-nav-btn" data-rail-scroll="${railId}" data-dir="1" aria-label="Scroll right">›</button>
+        </div>`
+      : '';
     return `
       <section class="explore-section fade-in">
         <div class="explore-section-heading">
-          <h2 class="serif">${escapeHtml(title)}</h2>
-          <p>${escapeHtml(subtitle)}</p>
+          <div>
+            <h2 class="serif">${escapeHtml(title)}</h2>
+            <p>${escapeHtml(subtitle)}</p>
+          </div>
+          ${navHtml}
         </div>
         ${innerHtml}
       </section>`;
+  }
+
+  function wireRailNav() {
+    container.querySelectorAll('[data-rail-scroll]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const rail = document.getElementById(btn.dataset.railScroll);
+        if (!rail) return;
+        const dir = Number(btn.dataset.dir);
+        rail.scrollBy({ left: dir * rail.clientWidth * 0.9, behavior: 'smooth' });
+      });
+    });
   }
 
   function genreChipRowHTML() {
@@ -162,20 +187,56 @@
     });
   }
 
+  const REVEAL_BATCH = 8;
+
+  // Reveals the next batch of already-fetched-and-filtered items for a
+  // rail — used by both the "show more" tile (click) and the endless-
+  // scroll listener below, so scrolling near the end works exactly like
+  // clicking it. No extra network call either way; it's just drawing from
+  // the pool already fetched in render().
+  async function revealMore(railId) {
+    const items = railItemsById.get(railId) || [];
+    const railEl = document.getElementById(railId);
+    if (!railEl) return;
+    const tile = railEl.querySelector('.show-more-tile');
+    const shownCount = railEl.querySelectorAll('.book-card').length;
+    if (shownCount >= items.length) { if (tile) tile.remove(); return; }
+    const nextBatch = items.slice(shownCount, shownCount + REVEAL_BATCH);
+    const cardsHtml = (await Promise.all(nextBatch.map(cardHTML))).join('');
+    if (tile) tile.insertAdjacentHTML('beforebegin', cardsHtml);
+    else railEl.insertAdjacentHTML('beforeend', cardsHtml);
+    wireCardClicks(railEl);
+    const remaining = items.length - shownCount - nextBatch.length;
+    if (tile) {
+      if (remaining > 0) tile.querySelector('.count').textContent = `+${remaining}`;
+      else tile.remove();
+    }
+  }
+
   function wireShowMore() {
     container.querySelectorAll('[data-show-more]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const items = railItemsById.get(btn.dataset.showMore) || [];
-        const railEl = document.getElementById(btn.dataset.showMore);
-        const cardsHtml = (await Promise.all(items.slice(RAIL_INITIAL).map(cardHTML))).join('');
-        btn.insertAdjacentHTML('beforebegin', cardsHtml);
-        wireCardClicks(railEl);
-        btn.remove();
+      btn.addEventListener('click', () => revealMore(btn.dataset.showMore));
+    });
+  }
+
+  // Endless scroll: scrolling a rail within ~1 card-width of its end
+  // reveals the next batch automatically, same pool as "show more".
+  function wireRailAutoLoad() {
+    railItemsById.forEach((items, railId) => {
+      const railEl = document.getElementById(railId);
+      if (!railEl) return;
+      let loading = false;
+      railEl.addEventListener('scroll', () => {
+        if (loading) return;
+        const nearEnd = railEl.scrollLeft + railEl.clientWidth >= railEl.scrollWidth - 200;
+        if (!nearEnd) return;
+        loading = true;
+        Promise.resolve(revealMore(railId)).finally(() => { loading = false; });
       });
     });
   }
 
-  const RAIL_POOL = 24; // how many candidates each rail keeps behind "show more", beyond the initial 12
+  const RAIL_POOL = 40; // how many candidates each rail keeps behind "show more"/endless scroll, beyond the initial 12
 
   async function render() {
     seen = new Set();
@@ -243,6 +304,8 @@
     wireGenreChips();
     wireCardClicks(container);
     wireShowMore();
+    wireRailAutoLoad();
+    wireRailNav();
   }
 
   render();
