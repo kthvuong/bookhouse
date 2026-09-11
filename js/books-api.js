@@ -52,11 +52,11 @@ const BooksAPI = (() => {
       });
     },
 
-    async searchBySubject(subject, { limit = 12, sort = 'rating' } = {}) {
+    async searchBySubject(subject, { limit = 12, sort = 'rating', offset = 0 } = {}) {
       const slug = subject.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
       if (!slug) return [];
       try {
-        const res = await fetch(`https://openlibrary.org/subjects/${encodeURIComponent(slug)}.json?limit=${limit}&sort=${encodeURIComponent(sort)}`);
+        const res = await fetch(`https://openlibrary.org/subjects/${encodeURIComponent(slug)}.json?limit=${limit}&offset=${offset}&sort=${encodeURIComponent(sort)}`);
         if (!res.ok) return [];
         const data = await res.json();
         return (data.works || []).map((w) => ({
@@ -207,10 +207,10 @@ const BooksAPI = (() => {
       return (data.items || []).map(mapGoogleVolume);
     },
 
-    async searchBySubject(subject, { limit = 12, sort = 'rating' } = {}) {
+    async searchBySubject(subject, { limit = 12, sort = 'rating', offset = 0 } = {}) {
       const q = `subject:"${subject}"`;
       const orderBy = sort === 'new' ? 'newest' : 'relevance';
-      const url = withGoogleKey(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=${Math.min(limit, 40)}&orderBy=${orderBy}&langRestrict=en`);
+      const url = withGoogleKey(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=${Math.min(limit, 40)}&startIndex=${offset}&orderBy=${orderBy}&langRestrict=en`);
       const res = await fetch(url);
       if (!res.ok) throw new Error('Subject search request failed');
       const data = await res.json();

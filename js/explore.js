@@ -24,7 +24,7 @@
     ya: 'young_adult_fiction', poetry: 'poetry', literary: 'literary_fiction',
   };
   const GENRE_LABEL = {
-    fantasy: 'Fantasy', scifi: 'Science Fiction', mythology: 'Mythology', romance: 'Romance',
+    all: 'All', fantasy: 'Fantasy', scifi: 'Science Fiction', mythology: 'Mythology', romance: 'Romance',
     mystery: 'Mystery', horror: 'Horror', historical: 'Historical Fiction', nonfiction: 'Nonfiction',
     classics: 'Classics', ya: 'Young Adult', poetry: 'Poetry', literary: 'Literary Fiction',
   };
@@ -70,12 +70,14 @@
     .filter(([author, avg]) => avg >= 4 && !dnfAuthors.has(author))
     .sort((a, b) => (b[1] - a[1]) || (b[2] - a[2]));
 
-  // ---- genre selector: your most-read genres first, the rest after ----
+  // ---- genre selector: a general "All" home, then your most-read
+  // genres first, the rest after. "All" is the default landing state —
+  // genre-specific sections only appear once you pick one.
   const allGenreKeys = Object.keys(PRIMARY_SUBJECT);
-  const orderedGenres = [...genreCounts.map(([k]) => k), ...allGenreKeys.filter((k) => !genreCounts.some(([gk]) => gk === k))];
+  const orderedGenres = ['all', ...genreCounts.map(([k]) => k), ...allGenreKeys.filter((k) => !genreCounts.some(([gk]) => gk === k))];
   let selectedGenre = null;
   try { selectedGenre = localStorage.getItem('exploreGenre'); } catch (e) {}
-  if (!selectedGenre || !PRIMARY_SUBJECT[selectedGenre]) selectedGenre = orderedGenres[0] || 'fantasy';
+  if (!selectedGenre || (selectedGenre !== 'all' && !PRIMARY_SUBJECT[selectedGenre])) selectedGenre = 'all';
 
   // ---- dedupe across sections + exclusion rules ----
   let seen = new Set();
@@ -94,7 +96,12 @@
   const shownItems = new Map();
   const RAIL_INITIAL = 12;
   let railCounter = 0;
-  const railItemsById = new Map();
+  // railId -> { items, fetchNext } — fetchNext is an optional async () =>
+  // newItems[], used to pull a fresh page from the API once the locally
+  // held items run out (see makeSubjectFetcher below). Sections without
+  // a natural "next page" (Trending Now's fixed list, the blended
+  // Recommended rail) just omit it and stop once items are exhausted.
+  const railStateById = new Map();
 
   async function cardHTML(item) {
     shownItems.set(item.externalId, item);
@@ -107,21 +114,23 @@
   }
 
   // Shows the first RAIL_INITIAL cards; anything beyond that sits behind a
-  // "show more" tile at the end of the rail (same items already fetched —
-  // clicking it just reveals more, no extra network call). Tracks the id
-  // of the rail it just built so the following sectionHTML() call (always
-  // made inline, right after awaiting this) can wire up nav arrows for it.
+  // "show more" tile at the end of the rail — clicking it, or scrolling
+  // near the end, reveals more from the local pool first and then (if
+  // fetchNext is given) fetches another page once that pool runs dry.
+  // Tracks the id of the rail it just built so the following sectionHTML()
+  // call (always made inline, right after awaiting this) can wire up nav
+  // arrows for it.
   let lastRailId = null;
-  async function railHTML(items) {
+  async function railHTML(items, fetchNext) {
     if (!items.length) { lastRailId = null; return ''; }
     const railId = `rail-${railCounter++}`;
     lastRailId = railId;
-    railItemsById.set(railId, items);
+    railStateById.set(railId, { items: items.slice(), fetchNext: fetchNext || null });
     const visible = items.slice(0, RAIL_INITIAL);
     const remainingCount = items.length - RAIL_INITIAL;
     const cardsHtml = (await Promise.all(visible.map(cardHTML))).join('');
-    const tileHtml = remainingCount > 0
-      ? `<button type="button" class="show-more-tile" data-show-more="${railId}"><span class="count">+${remainingCount}</span><span>Show more</span></button>`
+    const tileHtml = (remainingCount > 0 || fetchNext)
+      ? `<button type="button" class="show-more-tile" data-show-more="${railId}"><span class="count">${remainingCount > 0 ? '+' + remainingCount : '···'}</span><span>Show more</span></button>`
       : '';
     return `<div class="rail explore-rail" id="${railId}">${cardsHtml}${tileHtml}</div>`;
   }
@@ -189,26 +198,44 @@
 
   const REVEAL_BATCH = 8;
 
-  // Reveals the next batch of already-fetched-and-filtered items for a
-  // rail — used by both the "show more" tile (click) and the endless-
-  // scroll listener below, so scrolling near the end works exactly like
-  // clicking it. No extra network call either way; it's just drawing from
-  // the pool already fetched in render().
+  // Reveals the next batch for a rail — used by both the "show more" tile
+  // (click) and the endless-scroll listener below, so scrolling near the
+  // end works exactly like clicking it. Draws from the local pool first;
+  // once that's exhausted, calls the rail's fetchNext() (if it has one)
+  // for a fresh page before giving up, so "show more" keeps working
+  // rather than going stale after a couple of presses.
   async function revealMore(railId) {
-    const items = railItemsById.get(railId) || [];
+    const state = railStateById.get(railId);
+    if (!state) return;
     const railEl = document.getElementById(railId);
     if (!railEl) return;
     const tile = railEl.querySelector('.show-more-tile');
-    const shownCount = railEl.querySelectorAll('.book-card').length;
-    if (shownCount >= items.length) { if (tile) tile.remove(); return; }
-    const nextBatch = items.slice(shownCount, shownCount + REVEAL_BATCH);
+    let shownCount = railEl.querySelectorAll('.book-card').length;
+
+    if (shownCount >= state.items.length && state.fetchNext) {
+      if (tile) tile.querySelector('.count').textContent = '···';
+      let more = [];
+      try { more = await state.fetchNext(); } catch (e) { more = []; }
+      if (more.length) state.items.push(...more);
+      else state.fetchNext = null; // API has nothing left either
+    }
+
+    if (shownCount >= state.items.length) {
+      if (tile) tile.remove();
+      return;
+    }
+
+    const nextBatch = state.items.slice(shownCount, shownCount + REVEAL_BATCH);
     const cardsHtml = (await Promise.all(nextBatch.map(cardHTML))).join('');
     if (tile) tile.insertAdjacentHTML('beforebegin', cardsHtml);
     else railEl.insertAdjacentHTML('beforeend', cardsHtml);
     wireCardClicks(railEl);
-    const remaining = items.length - shownCount - nextBatch.length;
+
+    shownCount += nextBatch.length;
+    const remaining = state.items.length - shownCount;
     if (tile) {
       if (remaining > 0) tile.querySelector('.count').textContent = `+${remaining}`;
+      else if (state.fetchNext) tile.querySelector('.count').textContent = '···';
       else tile.remove();
     }
   }
@@ -220,9 +247,9 @@
   }
 
   // Endless scroll: scrolling a rail within ~1 card-width of its end
-  // reveals the next batch automatically, same pool as "show more".
+  // reveals the next batch automatically, same pool/fetchNext as "show more".
   function wireRailAutoLoad() {
-    railItemsById.forEach((items, railId) => {
+    railStateById.forEach((state, railId) => {
       const railEl = document.getElementById(railId);
       if (!railEl) return;
       let loading = false;
@@ -236,29 +263,46 @@
     });
   }
 
-  const RAIL_POOL = 40; // how many candidates each rail keeps behind "show more"/endless scroll, beyond the initial 12
+  const RAIL_POOL = 40; // how many candidates each rail keeps up front, before "show more"/endless scroll needs to fetch a fresh page
+
+  // A rail's fetchNext(): pulls the next page for a subject search once the
+  // initial RAIL_POOL is exhausted, applying the same global dedupe/
+  // exclusion rules as everything else. Keeps its own offset, starting
+  // right after the page already fetched up front.
+  function makeSubjectFetcher(subject, sort) {
+    let offset = RAIL_POOL;
+    return async () => {
+      let raw = [];
+      try { raw = await BooksAPI.searchBySubject(subject, { limit: RAIL_POOL, sort, offset }); } catch (e) { return []; }
+      offset += RAIL_POOL;
+      return filterCandidates(raw, raw.length);
+    };
+  }
 
   async function render() {
     seen = new Set();
     shownItems.clear();
-    railItemsById.clear();
+    railStateById.clear();
     railCounter = 0;
     container.innerHTML = genreChipRowHTML() + `<div class="empty-state"><p>Curating your shelf…</p></div>`;
     wireGenreChips();
 
+    const genreSelected = selectedGenre !== 'all';
     const genreLabel = GENRE_LABEL[selectedGenre];
     const subject = PRIMARY_SUBJECT[selectedGenre];
 
     const [trendingRaw, trendingGenreRaw, newRaw] = await Promise.all([
-      BooksAPI.trending({ limit: 40 }).catch(() => []),
-      BooksAPI.searchBySubject(subject, { limit: 40, sort: 'rating' }).catch(() => []),
-      BooksAPI.searchBySubject(subject, { limit: 40, sort: 'new' }).catch(() => []),
+      BooksAPI.trending({ limit: 100 }).catch(() => []),
+      genreSelected ? BooksAPI.searchBySubject(subject, { limit: RAIL_POOL, sort: 'rating' }).catch(() => []) : Promise.resolve([]),
+      genreSelected ? BooksAPI.searchBySubject(subject, { limit: RAIL_POOL, sort: 'new' }).catch(() => []) : Promise.resolve([]),
     ]);
 
     const sections = [];
     sections.push(sectionHTML('Trending Now', 'What readers everywhere are picking up right now.', await railHTML(filterCandidates(trendingRaw, RAIL_POOL))));
-    sections.push(sectionHTML(`Trending in ${genreLabel}`, `Popular right now in ${genreLabel.toLowerCase()}.`, await railHTML(filterCandidates(trendingGenreRaw, RAIL_POOL))));
-    sections.push(sectionHTML('New & Noteworthy', `Recently released in ${genreLabel.toLowerCase()}.`, await railHTML(filterCandidates(newRaw, RAIL_POOL))));
+    if (genreSelected) {
+      sections.push(sectionHTML(`Trending in ${genreLabel}`, `Popular right now in ${genreLabel.toLowerCase()}.`, await railHTML(filterCandidates(trendingGenreRaw, RAIL_POOL), makeSubjectFetcher(subject, 'rating'))));
+      sections.push(sectionHTML('New & Noteworthy', `Recently released in ${genreLabel.toLowerCase()}.`, await railHTML(filterCandidates(newRaw, RAIL_POOL), makeSubjectFetcher(subject, 'new'))));
+    }
 
     // ---- Recommended for You: your favourite authors + genres, blended ----
     // Shows as soon as there's any signal at all (one rated author, or one
@@ -292,7 +336,7 @@
         try { results = await BooksAPI.searchBySubject(subj, { limit: 40 }); } catch (e) {}
         const picks = filterCandidates(results, RAIL_POOL);
         if (picks.length) {
-          sections.push(sectionHTML(`Because You Liked ${anchor.book.title}`, `More books in the spirit of ${anchor.book.title}.`, await railHTML(picks)));
+          sections.push(sectionHTML(`Because You Liked ${anchor.book.title}`, `More books in the spirit of ${anchor.book.title}.`, await railHTML(picks, makeSubjectFetcher(subj, 'rating'))));
         }
       }
     }
