@@ -96,6 +96,45 @@
     toast(key ? 'API key saved' : 'API key removed');
   });
 
+  // ---- sync ----
+  const syncTokenInput = document.getElementById('sync-token-input');
+  const syncHint = document.getElementById('sync-hint');
+  const syncNowBtn = document.getElementById('sync-now-btn');
+
+  function formatSyncedAt() {
+    const iso = Sync.getLastSyncedAt();
+    if (!iso) return 'Never synced on this device.';
+    return `Last synced ${new Date(iso).toLocaleString()}.`;
+  }
+  function refreshSyncHint() {
+    syncHint.textContent = Sync.isConfigured()
+      ? formatSyncedAt()
+      : 'No sync token set — this device only has its own local library.';
+  }
+  syncTokenInput.value = Sync.token();
+  refreshSyncHint();
+
+  document.getElementById('save-sync-token-btn').addEventListener('click', () => {
+    Sync.setToken(syncTokenInput.value);
+    refreshSyncHint();
+    toast(Sync.isConfigured() ? 'Sync token saved' : 'Sync token removed');
+  });
+
+  syncNowBtn.addEventListener('click', async () => {
+    if (!Sync.isConfigured()) { toast('Set a sync token first'); return; }
+    syncNowBtn.disabled = true;
+    syncNowBtn.textContent = 'Syncing…';
+    try {
+      await Sync.syncNow();
+      toast('Synced');
+    } catch (e) {
+      toast('Sync failed — check your token and connection');
+    }
+    syncNowBtn.disabled = false;
+    syncNowBtn.textContent = 'Sync Now';
+    refreshSyncHint();
+  });
+
   // ---- theme ----
   const themeBtn = document.getElementById('settings-theme-toggle');
   function refreshThemeLabel() {

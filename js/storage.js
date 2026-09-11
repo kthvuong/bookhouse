@@ -17,6 +17,16 @@
    covers             cached cover image blobs, keyed by bookId
 
    Everything is exposed on the global `Storage` namespace.
+
+   Cross-device sync (js/sync.js) hooks in here rather than in each
+   namespace above: open() pulls the latest cloud snapshot once per
+   page load (before anything reads the DB) if Sync is configured and
+   newer than what's local, and put()/remove()/clearStore() schedule a
+   debounced push after any write — so every Storage.* method gets
+   sync for free without being touched individually. Covers aren't
+   synced (blobs stay device-local); everything else round-trips
+   through the same exportAll()/importAll() shape used by the manual
+   JSON backup in Settings.
    ============================================================ */
 
 const Storage = (() => {
@@ -24,7 +34,7 @@ const Storage = (() => {
   const DB_VERSION = 1;
   let dbPromise = null;
 
-  function open() {
+  function openDB() {
     if (dbPromise) return dbPromise;
     dbPromise = new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -69,6 +79,78 @@ const Storage = (() => {
     return dbPromise;
   }
 
+  const SYNCED_STORES = [
+    'books', 'readingEntries', 'progressUpdates', 'readingSessions',
+    'quotes', 'collections', 'collectionItems', 'goals', 'wrapped',
+  ];
+
+  // Applies a pulled snapshot directly against the raw IDB handle (not
+  // through put()/clearStore() below) so this can run from inside ready()
+  // itself without recursing back into ready() through tx().
+  function applySnapshotRaw(db, data) {
+    return new Promise((resolve, reject) => {
+      const t = db.transaction(SYNCED_STORES, 'readwrite');
+      t.oncomplete = () => resolve();
+      t.onerror = () => reject(t.error);
+      SYNCED_STORES.forEach((name) => {
+        const store = t.objectStore(name);
+        store.clear();
+        (data[name] || []).forEach((row) => store.put(row));
+      });
+    });
+  }
+
+  // Opens the DB, then — once per page load, before anything else touches
+  // it — pulls the latest cloud snapshot (if Sync is configured and newer
+  // than what's local) so every page starts from the same data regardless
+  // of which device last wrote it. Falls back to local data silently if
+  // Sync isn't set up or the network request fails.
+  // `Sync` (js/sync.js) is declared with `const` at global scope, which —
+  // unlike `var`/function declarations — does NOT attach to `window`, so
+  // this must check the bare identifier via `typeof`, never `window.Sync`.
+  function syncAvailable() {
+    return typeof Sync !== 'undefined' && Sync.isConfigured();
+  }
+
+  let readyPromise = null;
+  function open() {
+    if (readyPromise) return readyPromise;
+    readyPromise = openDB().then(async (db) => {
+      if (syncAvailable()) {
+        try {
+          const remote = await Sync.fetchRemote();
+          const localWatermark = Sync.getLastSyncedAt();
+          if (remote && remote.data && (!localWatermark || remote.updatedAt > localWatermark)) {
+            await applySnapshotRaw(db, remote.data);
+            Sync.recordSyncedAt(remote.updatedAt);
+          }
+        } catch (e) {
+          console.warn('Sync pull skipped:', e.message);
+        }
+      }
+      return db;
+    });
+    return readyPromise;
+  }
+
+  // Batches rapid successive writes into one push a couple seconds after
+  // the last one, instead of a network round-trip per keystroke/click.
+  let pushTimer = null;
+  function scheduleAutoPush() {
+    if (!syncAvailable()) return;
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(async () => {
+      try {
+        const snapshot = await exportAll();
+        delete snapshot.covers;
+        const { updatedAt } = await Sync.pushSnapshot(snapshot);
+        Sync.recordSyncedAt(updatedAt);
+      } catch (e) {
+        console.warn('Auto-sync push failed:', e.message);
+      }
+    }, 2500);
+  }
+
   function tx(storeNames, mode = 'readonly') {
     return open().then((db) => db.transaction(storeNames, mode));
   }
@@ -83,7 +165,10 @@ const Storage = (() => {
   function put(storeName, value) {
     return tx(storeName, 'readwrite').then((t) => {
       const store = t.objectStore(storeName);
-      return reqToPromise(store.put(value)).then(() => value);
+      return reqToPromise(store.put(value)).then(() => {
+        scheduleAutoPush();
+        return value;
+      });
     });
   }
 
@@ -102,7 +187,9 @@ const Storage = (() => {
   }
 
   function remove(storeName, key) {
-    return tx(storeName, 'readwrite').then((t) => reqToPromise(t.objectStore(storeName).delete(key)));
+    return tx(storeName, 'readwrite').then((t) =>
+      reqToPromise(t.objectStore(storeName).delete(key)).then(() => scheduleAutoPush())
+    );
   }
 
   function removeWhere(storeName, indexName, value) {
@@ -112,7 +199,9 @@ const Storage = (() => {
   }
 
   function clearStore(storeName) {
-    return tx(storeName, 'readwrite').then((t) => reqToPromise(t.objectStore(storeName).clear()));
+    return tx(storeName, 'readwrite').then((t) =>
+      reqToPromise(t.objectStore(storeName).clear()).then(() => scheduleAutoPush())
+    );
   }
 
   function uid() {

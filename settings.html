@@ -4,16 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Settings</title>
-<script src="js/config.js?v=23"></script>
-<script src="js/theme-init.js?v=23"></script>
-<script src="js/auth-init.js?v=23"></script>
-<link rel="stylesheet" href="css/base.css?v=23">
-<link rel="stylesheet" href="css/layout.css?v=23">
-<link rel="stylesheet" href="css/components.css?v=23">
-<link rel="stylesheet" href="css/settings.css?v=23">
+<script src="js/config.js?v=25"></script>
+<script src="js/theme-init.js?v=25"></script>
+<script src="js/auth-init.js?v=25"></script>
+<link rel="stylesheet" href="css/base.css?v=25">
+<link rel="stylesheet" href="css/layout.css?v=25">
+<link rel="stylesheet" href="css/components.css?v=25">
+<link rel="stylesheet" href="css/settings.css?v=25">
 </head>
 <body>
-<script src="js/auth-gate.js?v=23"></script>
+<script src="js/auth-gate.js?v=25"></script>
 <div id="header-root"></div>
 
 <main class="page-shell narrow">
@@ -78,6 +78,19 @@
   </section>
 
   <section class="settings-section">
+    <h2>Sync</h2>
+    <p class="desc">Your library lives in this browser by default, so a different device starts empty. Paste the sync token below (once per device) to keep everything — books, ratings, progress, goals — the same everywhere. This is whole-library sync: whichever device syncs most recently wins, so it isn't built for editing the same book on two devices at once.</p>
+    <div class="form-row">
+      <div class="field" style="flex:1;min-width:220px;"><label>Sync token</label><input class="input" id="sync-token-input" type="text" placeholder="Paste your sync token here" autocomplete="off"></div>
+      <div class="field" style="align-self:flex-end;"><button class="btn btn-primary" id="save-sync-token-btn">Save Token</button></div>
+    </div>
+    <div class="settings-actions" style="margin-top:14px;">
+      <button class="btn" id="sync-now-btn">Sync Now</button>
+    </div>
+    <p class="text-muted" id="sync-hint" style="font-size:12.5px;margin-top:8px;"></p>
+  </section>
+
+  <section class="settings-section">
     <h2>Backup &amp; Export</h2>
     <p class="desc">Your reading data lives entirely in this browser. Back it up regularly — it never depends on Open Library staying available.</p>
     <div class="settings-actions">
@@ -100,12 +113,13 @@
   </section>
 </main>
 
-<script src="js/storage.js?v=23"></script>
-<script src="js/books-api.js?v=23"></script>
-<script src="js/utils.js?v=23"></script>
-<script src="js/nav.js?v=23"></script>
-<script src="js/add-book.js?v=23"></script>
-<script src="js/book-preview.js?v=23"></script>
-<script src="js/settings.js?v=23"></script>
+<script src="js/storage.js?v=25"></script>
+<script src="js/sync.js?v=25"></script>
+<script src="js/books-api.js?v=25"></script>
+<script src="js/utils.js?v=25"></script>
+<script src="js/nav.js?v=25"></script>
+<script src="js/add-book.js?v=25"></script>
+<script src="js/book-preview.js?v=25"></script>
+<script src="js/settings.js?v=25"></script>
 </body>
 </html>
