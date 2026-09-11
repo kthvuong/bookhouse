@@ -92,6 +92,9 @@
   }
 
   const shownItems = new Map();
+  const RAIL_INITIAL = 12;
+  let railCounter = 0;
+  const railItemsById = new Map();
 
   async function cardHTML(item) {
     shownItems.set(item.externalId, item);
@@ -103,9 +106,20 @@
     return bookCardHTML(fakeEntry);
   }
 
+  // Shows the first RAIL_INITIAL cards; anything beyond that sits behind a
+  // "show more" tile at the end of the rail (same items already fetched —
+  // clicking it just reveals more, no extra network call).
   async function railHTML(items) {
     if (!items.length) return '';
-    return `<div class="rail explore-rail">${(await Promise.all(items.map(cardHTML))).join('')}</div>`;
+    const railId = `rail-${railCounter++}`;
+    railItemsById.set(railId, items);
+    const visible = items.slice(0, RAIL_INITIAL);
+    const remainingCount = items.length - RAIL_INITIAL;
+    const cardsHtml = (await Promise.all(visible.map(cardHTML))).join('');
+    const tileHtml = remainingCount > 0
+      ? `<button type="button" class="show-more-tile" data-show-more="${railId}"><span class="count">+${remainingCount}</span><span>Show more</span></button>`
+      : '';
+    return `<div class="rail explore-rail" id="${railId}">${cardsHtml}${tileHtml}</div>`;
   }
 
   function sectionHTML(title, subtitle, innerHtml) {
@@ -138,17 +152,36 @@
     });
   }
 
-  function wireCards() {
-    container.querySelectorAll('.book-card[data-book-id]').forEach((card) => {
+  function wireCardClicks(root) {
+    root.querySelectorAll('.book-card[data-book-id]').forEach((card) => {
+      if (card.dataset.wired) return;
+      card.dataset.wired = '1';
       const item = shownItems.get(card.dataset.bookId);
       if (!item) return;
       card.addEventListener('click', () => BookPreviewFlow.open(item));
     });
   }
 
+  function wireShowMore() {
+    container.querySelectorAll('[data-show-more]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const items = railItemsById.get(btn.dataset.showMore) || [];
+        const railEl = document.getElementById(btn.dataset.showMore);
+        const cardsHtml = (await Promise.all(items.slice(RAIL_INITIAL).map(cardHTML))).join('');
+        btn.insertAdjacentHTML('beforebegin', cardsHtml);
+        wireCardClicks(railEl);
+        btn.remove();
+      });
+    });
+  }
+
+  const RAIL_POOL = 24; // how many candidates each rail keeps behind "show more", beyond the initial 12
+
   async function render() {
     seen = new Set();
     shownItems.clear();
+    railItemsById.clear();
+    railCounter = 0;
     container.innerHTML = genreChipRowHTML() + `<div class="empty-state"><p>Curating your shelf…</p></div>`;
     wireGenreChips();
 
@@ -156,32 +189,36 @@
     const subject = PRIMARY_SUBJECT[selectedGenre];
 
     const [trendingRaw, trendingGenreRaw, newRaw] = await Promise.all([
-      BooksAPI.trending({ limit: 16 }).catch(() => []),
-      BooksAPI.searchBySubject(subject, { limit: 16, sort: 'rating' }).catch(() => []),
-      BooksAPI.searchBySubject(subject, { limit: 16, sort: 'new' }).catch(() => []),
+      BooksAPI.trending({ limit: 40 }).catch(() => []),
+      BooksAPI.searchBySubject(subject, { limit: 40, sort: 'rating' }).catch(() => []),
+      BooksAPI.searchBySubject(subject, { limit: 40, sort: 'new' }).catch(() => []),
     ]);
 
     const sections = [];
-    sections.push(sectionHTML('Trending Now', 'What readers everywhere are picking up right now.', await railHTML(filterCandidates(trendingRaw, 12))));
-    sections.push(sectionHTML(`Trending in ${genreLabel}`, `Popular right now in ${genreLabel.toLowerCase()}.`, await railHTML(filterCandidates(trendingGenreRaw, 12))));
-    sections.push(sectionHTML('New & Noteworthy', `Recently released in ${genreLabel.toLowerCase()}.`, await railHTML(filterCandidates(newRaw, 12))));
+    sections.push(sectionHTML('Trending Now', 'What readers everywhere are picking up right now.', await railHTML(filterCandidates(trendingRaw, RAIL_POOL))));
+    sections.push(sectionHTML(`Trending in ${genreLabel}`, `Popular right now in ${genreLabel.toLowerCase()}.`, await railHTML(filterCandidates(trendingGenreRaw, RAIL_POOL))));
+    sections.push(sectionHTML('New & Noteworthy', `Recently released in ${genreLabel.toLowerCase()}.`, await railHTML(filterCandidates(newRaw, RAIL_POOL))));
 
     // ---- Recommended for You: your favourite authors + genres, blended ----
-    if (finished.length >= 3) {
+    // Shows as soon as there's any signal at all (one rated author, or one
+    // finished book with genre info) rather than requiring a minimum
+    // library size — the section itself just won't render if both come
+    // back empty, via sectionHTML's own empty check below.
+    if (authorsByRating.length || genreCounts.length) {
       const recommendedRaw = [];
-      for (const [author] of authorsByRating.slice(0, 2)) {
+      for (const [author] of authorsByRating.slice(0, 3)) {
         let results = [];
-        try { results = await BooksAPI.search(author, { limit: 10 }); } catch (e) {}
+        try { results = await BooksAPI.search(author, { limit: 16 }); } catch (e) {}
         recommendedRaw.push(...results.filter((r) => (r.authors || []).some((a) => a.toLowerCase() === author.toLowerCase())));
       }
-      for (const [bucketKey] of genreCounts.slice(0, 2)) {
+      for (const [bucketKey] of genreCounts.slice(0, 3)) {
         const subj = PRIMARY_SUBJECT[bucketKey];
         if (!subj) continue;
         let results = [];
-        try { results = await BooksAPI.searchBySubject(subj, { limit: 12 }); } catch (e) {}
+        try { results = await BooksAPI.searchBySubject(subj, { limit: 24 }); } catch (e) {}
         recommendedRaw.push(...results);
       }
-      sections.push(sectionHTML('Recommended for You', 'Based on your ratings, genres, and authors.', await railHTML(filterCandidates(recommendedRaw, 12))));
+      sections.push(sectionHTML('Recommended for You', 'Based on your ratings, genres, and authors.', await railHTML(filterCandidates(recommendedRaw, RAIL_POOL))));
     }
 
     // ---- Because You Liked [Book] ----
@@ -191,8 +228,8 @@
       const subj = bucketKey && PRIMARY_SUBJECT[bucketKey];
       if (subj) {
         let results = [];
-        try { results = await BooksAPI.searchBySubject(subj, { limit: 16 }); } catch (e) {}
-        const picks = filterCandidates(results, 12);
+        try { results = await BooksAPI.searchBySubject(subj, { limit: 40 }); } catch (e) {}
+        const picks = filterCandidates(results, RAIL_POOL);
         if (picks.length) {
           sections.push(sectionHTML(`Because You Liked ${anchor.book.title}`, `More books in the spirit of ${anchor.book.title}.`, await railHTML(picks)));
         }
@@ -204,7 +241,8 @@
       ? rendered.join('')
       : `<div class="explore-empty empty-state"><div class="icon">🔭</div><h3>Couldn't load anything right now</h3><p>This needs a working connection to Open Library or Google Books. Check your connection and try again.</p></div>`);
     wireGenreChips();
-    wireCards();
+    wireCardClicks(container);
+    wireShowMore();
   }
 
   render();

@@ -20,4 +20,26 @@
 
 .explore-rail .book-card { width: 150px; }
 
+.show-more-tile {
+  flex-shrink: 0;
+  width: 150px;
+  aspect-ratio: 2 / 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: var(--radius-sm);
+  border: 1.5px dashed var(--border-strong);
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  transition: background var(--dur-fast), color var(--dur-fast), transform var(--dur-med) var(--ease-out);
+}
+.show-more-tile:hover { background: var(--accent-tint); color: var(--accent-strong); transform: translateY(-4px); }
+.show-more-tile .count { font-size: 22px; font-family: var(--font-serif); font-weight: 700; }
+
 .explore-empty { text-align: center; padding: var(--space-9) var(--space-5); }
