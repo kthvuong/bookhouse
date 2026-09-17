@@ -79,12 +79,25 @@
     `;
     wireEvents();
     fillCoverAsync();
+    fillHardcoverRatingAsync();
   }
 
   async function fillCoverAsync() {
     const wrap = root.querySelector('#book-cover-wrap');
     if (!wrap) return;
     wrap.innerHTML = await coverMarkup(book);
+  }
+
+  async function fillHardcoverRatingAsync() {
+    const mount = root.querySelector('#hardcover-rating-mount');
+    if (!mount || typeof Reviews === 'undefined') return;
+    const result = await Reviews.fetchRating(book);
+    if (!result) { mount.remove(); return; }
+    const stars = `★ ${result.rating.toFixed(1)}`;
+    const count = result.ratingsCount ? ` (${result.ratingsCount.toLocaleString()})` : '';
+    mount.innerHTML = result.hardcoverUrl
+      ? `<a href="${escapeHtml(result.hardcoverUrl)}" target="_blank" rel="noopener" class="hardcover-rating-link">${stars}${count} on Hardcover</a>`
+      : `${stars}${count} on Hardcover`;
   }
 
   // ---------------------------------------------------------
@@ -107,6 +120,7 @@
             ${book.pageCount ? `<span class="meta-item"><strong>${book.pageCount}</strong> pages</span>` : ''}
             ${book.firstPublishYear ? `<span class="meta-item">Published <strong>${book.firstPublishYear}</strong></span>` : ''}
             ${isbn ? `<span class="meta-item">ISBN <strong>${escapeHtml(isbn)}</strong></span>` : ''}
+            <span class="meta-item" id="hardcover-rating-mount"></span>
           </div>
 
           ${genres.length ? `<div class="chip-row">${genres.map((g) => `<span class="chip">${escapeHtml(g)}</span>`).join('')}</div>` : ''}
