@@ -339,6 +339,8 @@
   width: 26px; height: 26px;
 }
 .star-input .star-slot svg { width: 26px; height: 26px; position: absolute; inset: 0; }
+.star-input .star-bg { fill: var(--border-strong); }
+.star-input .star-fg { fill: var(--gold); }
 .star-input .half-hit { position: absolute; inset: 0; width: 50%; z-index: 2; cursor: pointer; }
 .star-input .half-hit.right { left: 50%; width: 50%; }
 .star-input .rating-label {
