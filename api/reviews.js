@@ -15,7 +15,103 @@
    reaches the browser.
    ============================================================ */
 
+const { Redis } = require('@upstash/redis');
+const { norm, lastName, titleVariants, pickMatches } = require('./_hardcover-match');
+
 const HARDCOVER_ENDPOINT = 'https://api.hardcover.app/v1/graphql';
+
+// Optional: ratings barely move, and Hardcover allows only ~10 requests in a
+// burst and ~60 a minute, so lookups are cached in the same Redis as sync.
+// If Redis isn't reachable this just falls through to asking Hardcover.
+const redis = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
+  ? new Redis({ url: process.env.KV_REST_API_URL, token: process.env.KV_REST_API_TOKEN })
+  : null;
+const TTL_HIT = 7 * 24 * 3600;
+const TTL_MISS = 24 * 3600;
+const MAX_BATCH = 24;
+
+// One request covers a whole batch of titles. Author names are used to avoid
+// matching a different book with the same title; if the API rejects the nested
+// selection (query depth limits), retry title-only.
+function batchQuery(withAuthors) {
+  return `
+    query Batch($titles: [String!]!) {
+      books(where: { title: { _in: $titles } }, order_by: { users_count: desc }, limit: 200) {
+        title slug rating ratings_count users_count
+        ${withAuthors ? 'contributions(limit: 4) { author { name } }' : ''}
+      }
+    }`;
+}
+
+async function runBatchQuery(titles, withAuthors) {
+  const gqlRes = await fetch(HARDCOVER_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.HARDCOVER_API_TOKEN}` },
+    body: JSON.stringify({ query: batchQuery(withAuthors), variables: { titles } }),
+  });
+  if (!gqlRes.ok) return { failed: true, status: gqlRes.status };
+  const data = await gqlRes.json();
+  if (data.errors) return { failed: true, errors: data.errors };
+  return { rows: (data.data && data.data.books) || [] };
+}
+
+/** Returns an array aligned to `books` of { rating, ratingsCount, hardcoverUrl } | null,
+ *  or null if Hardcover couldn't be reached (so callers don't cache a failure as "no match"). */
+async function queryHardcover(books) {
+  const titles = [...new Set(books.flatMap((b) => titleVariants(b.title)))];
+  if (!titles.length) return books.map(() => null);
+  let out = await runBatchQuery(titles, true);
+  if (out.failed && out.errors) out = await runBatchQuery(titles, false);
+  if (out.failed) return null;
+  return pickMatches(books, out.rows);
+}
+
+function cacheKey(b) {
+  return `hc:r:v1:${norm(b.title)}|${lastName(b.author)}`;
+}
+
+async function lookupBatch(books) {
+  const results = new Array(books.length).fill(null);
+  const keys = books.map(cacheKey);
+  let cached = [];
+  if (redis) {
+    try { cached = await redis.mget(...keys); } catch (e) { cached = []; }
+  }
+  const misses = [];
+  books.forEach((b, i) => {
+    const c = cached[i];
+    if (c && typeof c === 'object') results[i] = c.miss ? null : c;
+    else if (b.title) misses.push(i);
+  });
+  if (!misses.length) return results;
+
+  const fetched = await queryHardcover(misses.map((i) => books[i]));
+  if (!fetched) return results;
+  const writes = [];
+  misses.forEach((idx, j) => {
+    results[idx] = fetched[j];
+    if (redis) writes.push(redis.set(keys[idx], fetched[j] || { miss: true }, { ex: fetched[j] ? TTL_HIT : TTL_MISS }));
+  });
+  await Promise.allSettled(writes);
+  return results;
+}
+
+async function handleBatch(req, res) {
+  let body = req.body;
+  if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = null; } }
+  const books = body && Array.isArray(body.books) ? body.books.slice(0, MAX_BATCH) : null;
+  if (!books) { res.status(400).json({ error: 'Expected { books: [{ title, author }] }' }); return; }
+  const clean = books.map((b) => ({ title: String((b && b.title) || ''), author: String((b && b.author) || '') }));
+  if (!process.env.HARDCOVER_API_TOKEN) {
+    res.status(200).json({ results: clean.map(() => null), reason: 'HARDCOVER_API_TOKEN not configured' });
+    return;
+  }
+  try {
+    res.status(200).json({ results: await lookupBatch(clean) });
+  } catch (e) {
+    res.status(200).json({ results: clean.map(() => null), reason: e.message });
+  }
+}
 
 const SEARCH_QUERY = `
   query FindBook($q: String!) {
@@ -39,6 +135,10 @@ module.exports = async function handler(req, res) {
   const providedToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
   if (!process.env.SYNC_TOKEN || providedToken !== process.env.SYNC_TOKEN) {
     res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+  if (req.method === 'POST') {
+    await handleBatch(req, res);
     return;
   }
   if (req.method !== 'GET') {

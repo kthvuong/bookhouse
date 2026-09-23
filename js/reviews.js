@@ -50,6 +50,52 @@ const Reviews = (() => {
     return result;
   }
 
+  const batchKey = (b) => `t:${b.title}|${(b.authors || [])[0] || ''}`;
+
+  /** Looks up many books in as few requests as possible (one per 24).
+   *  Returns an array aligned to `books` of { rating, ratingsCount, hardcoverUrl } | null.
+   *  Failures are never cached, so a blip doesn't hide a rating for the whole session. */
+  async function fetchBatch(books) {
+    const out = new Array(books.length).fill(null);
+    if (typeof Sync === 'undefined' || !Sync.isConfigured()) return out;
+
+    const pending = [];
+    books.forEach((b, i) => {
+      const k = batchKey(b);
+      if (cache.has(k)) out[i] = cache.get(k);
+      else if (b.title) pending.push(i);
+    });
+
+    for (let s = 0; s < pending.length; s += 24) {
+      const chunk = pending.slice(s, s + 24);
+      try {
+        const res = await fetch('/api/reviews', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${Sync.token()}` },
+          body: JSON.stringify({ books: chunk.map((i) => ({ title: books[i].title, author: (books[i].authors || [])[0] || '' })) }),
+        });
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (!data || !Array.isArray(data.results)) continue;
+        chunk.forEach((i, j) => {
+          const r = data.results[j];
+          const value = r && typeof r.rating === 'number' ? r : null;
+          out[i] = value;
+          cache.set(batchKey(books[i]), value);
+        });
+      } catch (e) {
+        console.warn('Hardcover batch lookup failed:', e.message);
+      }
+    }
+    return out;
+  }
+
+  /** Compact card label, e.g. "★ 4.6 · Hardcover". Deliberately not the gold
+   *  star row, which is reserved for your own ratings. */
+  function compactHTML(rating, source) {
+    return `<span class="cr-score">★ ${Number(rating).toFixed(1)}</span><span class="cr-src"> · ${escapeHtml(source)}</span>`;
+  }
+
   /** "★ 4.4 (128,940) on Hardcover", linked to the book's Hardcover page when we have it. */
   function ratingHTML(result) {
     const stars = `★ ${result.rating.toFixed(1)}`;
@@ -60,5 +106,5 @@ const Reviews = (() => {
       : text;
   }
 
-  return { fetchRating, ratingHTML };
+  return { fetchRating, fetchBatch, compactHTML, ratingHTML };
 })();

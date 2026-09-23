@@ -108,9 +108,39 @@
     const fakeEntry = {
       book: { id: item.externalId, title: item.title, authors: item.authors, coverUrl: item.coverUrl, hasCachedCover: false },
       status: null,
-      rating: item.averageRating || null,
+      // The gold star row means "your rating" everywhere else in the app, and
+      // nothing here is yours yet — community scores are added below as labeled
+      // text (fillCommunityRatings) so the two can't be mistaken for each other.
+      rating: null,
     };
     return bookCardHTML(fakeEntry);
+  }
+
+  // Adds a "★ 4.6 · Hardcover" line under each new card. Hardcover is looked up
+  // in one batched request per group of cards; where it has no match (or sync
+  // isn't set up) it falls back to Google Books' own average when we have one.
+  async function fillCommunityRatings(root) {
+    const pending = [];
+    root.querySelectorAll('.book-card[data-book-id]').forEach((card) => {
+      if (card.dataset.ratingDone) return;
+      card.dataset.ratingDone = '1';
+      const item = shownItems.get(card.dataset.bookId);
+      if (!item) return;
+      const slot = document.createElement('div');
+      slot.className = 'community-rating loading';
+      card.appendChild(slot);
+      pending.push({ item, slot });
+    });
+    if (!pending.length || typeof Reviews === 'undefined') {
+      pending.forEach(({ slot }) => slot.remove());
+      return;
+    }
+    const results = await Reviews.fetchBatch(pending.map((p) => p.item));
+    pending.forEach(({ item, slot }, i) => {
+      slot.classList.remove('loading');
+      if (results[i]) slot.innerHTML = Reviews.compactHTML(results[i].rating, 'Hardcover');
+      else if (item.averageRating) slot.innerHTML = Reviews.compactHTML(item.averageRating, 'Google Books');
+    });
   }
 
   // Shows the first RAIL_INITIAL cards; anything beyond that sits behind a
@@ -230,6 +260,7 @@
     if (tile) tile.insertAdjacentHTML('beforebegin', cardsHtml);
     else railEl.insertAdjacentHTML('beforeend', cardsHtml);
     wireCardClicks(railEl);
+    fillCommunityRatings(railEl);
 
     shownCount += nextBatch.length;
     const stillMore = shownCount < state.items.length || !!state.fetchNext;
@@ -346,6 +377,7 @@
       : `<div class="explore-empty empty-state"><div class="icon">🔭</div><h3>Couldn't load anything right now</h3><p>This needs a working connection to Open Library or Google Books. Check your connection and try again.</p></div>`);
     wireGenreChips();
     wireCardClicks(container);
+    fillCommunityRatings(container);
     wireShowMore();
     wireRailAutoLoad();
     wireRailNav();

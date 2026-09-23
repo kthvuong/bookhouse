@@ -39,6 +39,13 @@
 
 .explore-rail .book-card { width: 150px; }
 
+/* Community score (Hardcover / Google). Muted text on purpose — the gold star
+   row is reserved for your own ratings. */
+.community-rating { font-size: 11.5px; color: var(--text-muted); margin-top: -4px; }
+.community-rating.loading { min-height: 14px; }
+.community-rating:empty:not(.loading) { display: none; }
+.community-rating .cr-score { color: var(--text-secondary); font-weight: 600; }
+
 .show-more-tile {
   flex-shrink: 0;
   width: 150px;
