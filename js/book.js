@@ -93,11 +93,7 @@
     if (!mount || typeof Reviews === 'undefined') return;
     const result = await Reviews.fetchRating(book);
     if (!result) { mount.remove(); return; }
-    const stars = `★ ${result.rating.toFixed(1)}`;
-    const count = result.ratingsCount ? ` (${result.ratingsCount.toLocaleString()})` : '';
-    mount.innerHTML = result.hardcoverUrl
-      ? `<a href="${escapeHtml(result.hardcoverUrl)}" target="_blank" rel="noopener" class="hardcover-rating-link">${stars}${count} on Hardcover</a>`
-      : `${stars}${count} on Hardcover`;
+    mount.innerHTML = Reviews.ratingHTML(result);
   }
 
   // ---------------------------------------------------------

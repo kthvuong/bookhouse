@@ -24,14 +24,29 @@ const BookPreviewFlow = (() => {
     setTimeout(() => { modal.innerHTML = ''; }, 200);
   }
 
+  // Guards against a slow lookup from a previously-opened book landing in
+  // the modal after it's been reopened for a different one.
+  let openToken = 0;
+
   async function open(result) {
+    const token = ++openToken;
     ensureModal();
     render(result, { description: '', genres: [] }, true);
     overlay.classList.add('open');
 
+    // Started in parallel with the description fetch, but never awaited
+    // before rendering — a slow rating lookup shouldn't hold up the synopsis.
+    const ratingPromise = typeof Reviews !== 'undefined' ? Reviews.fetchRating(result) : Promise.resolve(null);
+
     let details = { description: '', genres: [] };
     try { details = await BooksAPI.getDetails(result.externalId); } catch (e) {}
+    if (token !== openToken) return;
     render(result, details, false);
+
+    const rating = await ratingPromise;
+    if (token !== openToken || !rating) return;
+    const mount = modal.querySelector('#bp-hardcover-mount');
+    if (mount) mount.innerHTML = Reviews.ratingHTML(rating);
   }
 
   function render(result, details, loading) {
@@ -59,6 +74,7 @@ const BookPreviewFlow = (() => {
             ${result.subtitle ? `<div class="sub">${escapeHtml(result.subtitle)}</div>` : ''}
             <div class="sub" style="margin-top:4px;">${escapeHtml(authorList(result.authors))}</div>
             <div class="sub">${escapeHtml(metaBits)}</div>
+            <div class="sub" id="bp-hardcover-mount"></div>
           </div>
         </div>
         ${genres.length ? `<div class="chip-row" style="margin-top:14px;">${genres.map((g) => `<span class="chip">${escapeHtml(g)}</span>`).join('')}</div>` : ''}

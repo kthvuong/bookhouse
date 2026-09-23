@@ -50,5 +50,15 @@ const Reviews = (() => {
     return result;
   }
 
-  return { fetchRating };
+  /** "★ 4.4 (128,940) on Hardcover", linked to the book's Hardcover page when we have it. */
+  function ratingHTML(result) {
+    const stars = `★ ${result.rating.toFixed(1)}`;
+    const count = result.ratingsCount ? ` (${result.ratingsCount.toLocaleString()})` : '';
+    const text = `${stars}${count} on Hardcover`;
+    return result.hardcoverUrl
+      ? `<a href="${escapeHtml(result.hardcoverUrl)}" target="_blank" rel="noopener" class="hardcover-rating-link">${text}</a>`
+      : text;
+  }
+
+  return { fetchRating, ratingHTML };
 })();
