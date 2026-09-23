@@ -166,8 +166,8 @@ function initGlobalSearch() {
     }
     if (myRequest !== requestId) return;
 
-    const ownedKeys = new Set(entries.map((e) => e.book && e.book.externalId).filter(Boolean));
-    const newResults = externalResults.filter((r) => !ownedKeys.has(r.externalId)).slice(0, 6);
+    const isOwned = buildOwnedMatcher(entries.map((e) => e.book));
+    const newResults = externalResults.filter((r) => !isOwned(r)).slice(0, 6);
 
     let html = renderSearchGroup('In your library', personalMatches.map(personalRowHTML));
     html += renderSearchGroup('From Open Library', newResults.map(externalRowHTML));

@@ -50,7 +50,7 @@
 
   // ---- your own reading data ----
   const entries = (await Storage.ReadingEntries.allWithBooks()).filter((e) => e.book);
-  const ownedExternalIds = new Set(entries.map((e) => e.book.externalId).filter(Boolean));
+  const isOwned = buildOwnedMatcher(entries.map((e) => e.book));
   const finished = entries.filter((e) => e.status === 'finished');
   const loved = finished.filter((e) => e.rating >= 4).sort((a, b) => (b.rating - a.rating) || (b.dateFinished || '').localeCompare(a.dateFinished || ''));
   const dnfAuthors = new Set(entries.filter((e) => e.status === 'dnf').flatMap((e) => e.book.authors || []));
@@ -84,7 +84,7 @@
   function filterCandidates(results, limit) {
     const out = [];
     for (const r of results || []) {
-      if (!r.externalId || ownedExternalIds.has(r.externalId) || seen.has(r.externalId)) continue;
+      if (!r.externalId || isOwned(r) || seen.has(r.externalId)) continue;
       if ((r.authors || []).some((a) => dnfAuthors.has(a))) continue;
       seen.add(r.externalId);
       out.push(r);

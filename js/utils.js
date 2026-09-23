@@ -544,6 +544,65 @@ async function renderCardList(container, entries, opts) {
   wireBookCardClicks(container);
 }
 
+/* ---- "is this search result a book I already own?" ----
+   externalId alone isn't enough: the same book has a different id in
+   Google Books vs Open Library, so a book added from one and listed by
+   the other looked brand new. Also matches on ISBN, and on title + first
+   author's last name (allowing "Series: Title" vs "Title" differences). */
+function matchNorm(s) {
+  return String(s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function matchLast(name) {
+  const parts = matchNorm(name).split(' ');
+  return parts[parts.length - 1] || '';
+}
+function matchTitleVariants(title) {
+  const full = String(title || '').trim();
+  const out = new Set([full]);
+  const i = full.indexOf(':');
+  if (i > 0) { out.add(full.slice(0, i).trim()); out.add(full.slice(i + 1).trim()); }
+  return [...out].filter(Boolean);
+}
+
+/** Returns a function (searchResult) => ownedBook | null, built from your library's books. */
+function buildOwnedMatcher(books) {
+  const byExternal = new Map();
+  const byIsbn = new Map();
+  const byFullTitle = new Map();
+  const byAnyVariant = new Map();
+  (books || []).forEach((b) => {
+    if (!b) return;
+    if (b.externalId) byExternal.set(b.externalId, b);
+    [b.isbn13, b.isbn10].filter(Boolean).forEach((i) => byIsbn.set(String(i).replace(/-/g, ''), b));
+    const last = matchLast((b.authors || [])[0]);
+    if (!last) return;
+    byFullTitle.set(`${matchNorm(b.title)}|${last}`, b);
+    matchTitleVariants(b.title).forEach((v) => byAnyVariant.set(`${matchNorm(v)}|${last}`, b));
+  });
+
+  return (r) => {
+    if (!r) return null;
+    if (r.externalId && byExternal.has(r.externalId)) return byExternal.get(r.externalId);
+    for (const i of [r.isbn13, r.isbn10]) {
+      const key = i && String(i).replace(/-/g, '');
+      if (key && byIsbn.has(key)) return byIsbn.get(key);
+    }
+    const last = matchLast((r.authors || [])[0]);
+    if (!last) return null;
+    // Only one side is ever expanded into variants: expanding both would let
+    // "Mistborn: The Final Empire" match "Mistborn: The Hero of Ages" via the
+    // shared "Mistborn" half.
+    const direct = byAnyVariant.get(`${matchNorm(r.title)}|${last}`);
+    if (direct) return direct;
+    for (const v of matchTitleVariants(r.title)) {
+      const hit = byFullTitle.get(`${matchNorm(v)}|${last}`);
+      if (hit) return hit;
+    }
+    return null;
+  };
+}
+
 function coverFallbackHiddenHTML(title) {
   return `<div class="cover-fallback" style="display:none;position:absolute;inset:0;"><span>${escapeHtml(truncate(title, 60))}</span></div>`;
 }

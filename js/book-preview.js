@@ -31,7 +31,12 @@ const BookPreviewFlow = (() => {
   async function open(result) {
     const token = ++openToken;
     ensureModal();
-    render(result, { description: '', genres: [] }, true);
+    // Resolved up front so the very first paint already says "In your
+    // library" instead of flashing an Add button for a book you own.
+    let owned = null;
+    try { owned = buildOwnedMatcher(await Storage.Books.getAll())(result); } catch (e) {}
+    if (token !== openToken) return;
+    render(result, { description: '', genres: [] }, true, owned);
     overlay.classList.add('open');
 
     // Started in parallel with the description fetch, but never awaited
@@ -41,7 +46,7 @@ const BookPreviewFlow = (() => {
     let details = { description: '', genres: [] };
     try { details = await BooksAPI.getDetails(result.externalId); } catch (e) {}
     if (token !== openToken) return;
-    render(result, details, false);
+    render(result, details, false, owned);
 
     const rating = await ratingPromise;
     if (token !== openToken || !rating) return;
@@ -49,7 +54,7 @@ const BookPreviewFlow = (() => {
     if (mount) mount.innerHTML = Reviews.ratingHTML(rating);
   }
 
-  function render(result, details, loading) {
+  function render(result, details, loading, owned) {
     const cover = result.coverUrlLarge || result.coverUrl
       ? `<img src="${escapeHtml(result.coverUrlLarge || result.coverUrl)}" alt="">`
       : coverFallbackHTML(result.title);
@@ -85,15 +90,23 @@ const BookPreviewFlow = (() => {
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" id="bp-close-2">Close</button>
-        <button class="btn btn-primary" id="bp-add-btn">+ Add to Library</button>
+        ${owned
+          ? `<button class="btn btn-primary" id="bp-view-btn">View in Library →</button>`
+          : `<button class="btn btn-primary" id="bp-add-btn">+ Add to Library</button>`}
       </div>`;
 
     modal.querySelector('#bp-close').addEventListener('click', close);
     modal.querySelector('#bp-close-2').addEventListener('click', close);
-    modal.querySelector('#bp-add-btn').addEventListener('click', () => {
-      close();
-      setTimeout(() => AddBookFlow.openWithResult(result), 210);
-    });
+    if (owned) {
+      modal.querySelector('#bp-view-btn').addEventListener('click', () => {
+        window.location.href = `book.html?id=${owned.id}`;
+      });
+    } else {
+      modal.querySelector('#bp-add-btn').addEventListener('click', () => {
+        close();
+        setTimeout(() => AddBookFlow.openWithResult(result), 210);
+      });
+    }
   }
 
   return { open, close };

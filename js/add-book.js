@@ -96,12 +96,12 @@ const AddBookFlow = (() => {
         return;
       }
       const existing = await Storage.Books.getAll();
-      const existingByExternalId = new Map(existing.filter((b) => b.externalId).map((b) => [b.externalId, b]));
+      const ownedFor = buildOwnedMatcher(existing);
 
-      results.innerHTML = list.map((r, i) => searchResultRow(r, i, existingByExternalId.get(r.externalId))).join('');
+      results.innerHTML = list.map((r, i) => searchResultRow(r, i, ownedFor(r))).join('');
       results.querySelectorAll('[data-result-idx]').forEach((row) => {
         row.addEventListener('click', () => {
-          const owned = existingByExternalId.get(list[Number(row.dataset.resultIdx)].externalId);
+          const owned = ownedFor(list[Number(row.dataset.resultIdx)]);
           if (owned) window.location.href = `book.html?id=${owned.id}`;
           else renderQuickAddStep(list[Number(row.dataset.resultIdx)]);
         });
@@ -378,7 +378,7 @@ const AddBookFlow = (() => {
     if (extra.rating) entryPatch.rating = extra.rating;
 
     const existingBooks = await Storage.Books.getAll();
-    const dupe = existingBooks.find((b) => b.externalId === result.externalId);
+    const dupe = buildOwnedMatcher(existingBooks)(result);
     if (dupe) {
       if (status === 'finished') Object.assign(entryPatch, finishedProgressPatch(dupe));
       const entry = await Storage.ReadingEntries.getByBookId(dupe.id);
