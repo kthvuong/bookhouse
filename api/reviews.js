@@ -30,44 +30,67 @@ const TTL_HIT = 7 * 24 * 3600;
 const TTL_MISS = 24 * 3600;
 const MAX_BATCH = 24;
 
-// One request covers a whole batch of titles. Author names are used to avoid
-// matching a different book with the same title; if the API rejects the nested
-// selection (query depth limits), retry title-only.
-function batchQuery(withAuthors) {
-  return `
-    query Batch($titles: [String!]!) {
-      books(where: { title: { _in: $titles } }, order_by: { users_count: desc }, limit: 200) {
-        title slug rating ratings_count users_count
-        ${withAuthors ? 'contributions(limit: 4) { author { name } }' : ''}
-      }
-    }`;
+// Hardcover allows at most 5 top-level queries per request, so each request
+// carries up to 5 aliased lookups (one per book). Every lookup is a title
+// prefix search (subtitled editions like "Atomic Habits: An Easy & Proven Way…"
+// wouldn't match an exact title), best-known first. Author names are used to
+// avoid matching a different book with the same title; if the API rejects the
+// nested selection (query depth limits), retry title-only.
+const PER_REQUEST = 5;
+const PER_LOOKUP = 15;
+
+function likeEscape(s) {
+  return String(s).replace(/[%_\\]/g, ' ').trim();
 }
 
-async function runBatchQuery(titles, withAuthors) {
+function batchQuery(count, withAuthors) {
+  const vars = Array.from({ length: count }, (_, i) => `$p${i}: String!, $e${i}: [String!]!`).join(', ');
+  const fields = `title slug rating ratings_count users_count ${withAuthors ? 'contributions(limit: 4) { author { name } }' : ''}`;
+  const lookups = Array.from({ length: count }, (_, i) => `
+      b${i}: books(where: { _or: [{ title: { _ilike: $p${i} } }, { title: { _in: $e${i} } }] },
+        order_by: { users_count: desc }, limit: ${PER_LOOKUP}) { ${fields} }`).join('');
+  return `query Batch(${vars}) {${lookups}\n    }`;
+}
+
+async function runBatchQuery(group, withAuthors) {
+  const variables = {};
+  group.forEach((b, i) => {
+    const vs = titleVariants(b.title);
+    const head = vs.length > 1 ? vs[1] : vs[0];
+    variables[`p${i}`] = `${likeEscape(head)}%`;
+    variables[`e${i}`] = vs;
+  });
   const gqlRes = await fetch(HARDCOVER_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.HARDCOVER_API_TOKEN}` },
-    body: JSON.stringify({ query: batchQuery(withAuthors), variables: { titles } }),
+    body: JSON.stringify({ query: batchQuery(group.length, withAuthors), variables }),
   });
   if (!gqlRes.ok) return { failed: true, status: gqlRes.status };
   const data = await gqlRes.json();
   if (data.errors) return { failed: true, errors: data.errors };
-  return { rows: (data.data && data.data.books) || [] };
+  return { data: data.data || {} };
+}
+
+/** Looks one group (<= 5 books) up; returns aligned results or null on failure. */
+async function queryGroup(group) {
+  let out = await runBatchQuery(group, true);
+  if (out.failed && out.errors) out = await runBatchQuery(group, false);
+  if (out.failed) return null;
+  return group.map((b, i) => pickMatches([b], out.data[`b${i}`] || [])[0]);
 }
 
 /** Returns an array aligned to `books` of { rating, ratingsCount, hardcoverUrl } | null,
- *  or null if Hardcover couldn't be reached (so callers don't cache a failure as "no match"). */
+ *  with `undefined` for any book whose request failed (so callers don't cache a
+ *  failure as "no match"). */
 async function queryHardcover(books) {
-  const titles = [...new Set(books.flatMap((b) => titleVariants(b.title)))];
-  if (!titles.length) return books.map(() => null);
-  let out = await runBatchQuery(titles, true);
-  if (out.failed && out.errors) out = await runBatchQuery(titles, false);
-  if (out.failed) return null;
-  return pickMatches(books, out.rows);
+  const groups = [];
+  for (let i = 0; i < books.length; i += PER_REQUEST) groups.push(books.slice(i, i + PER_REQUEST));
+  const settled = await Promise.all(groups.map(queryGroup));
+  return settled.flatMap((r, gi) => r || groups[gi].map(() => undefined));
 }
 
 function cacheKey(b) {
-  return `hc:r:v1:${norm(b.title)}|${lastName(b.author)}`;
+  return `hc:r:v2:${norm(b.title)}|${lastName(b.author)}`;
 }
 
 async function lookupBatch(books) {
@@ -86,9 +109,9 @@ async function lookupBatch(books) {
   if (!misses.length) return results;
 
   const fetched = await queryHardcover(misses.map((i) => books[i]));
-  if (!fetched) return results;
   const writes = [];
   misses.forEach((idx, j) => {
+    if (fetched[j] === undefined) return;
     results[idx] = fetched[j];
     if (redis) writes.push(redis.set(keys[idx], fetched[j] || { miss: true }, { ex: fetched[j] ? TTL_HIT : TTL_MISS }));
   });
@@ -151,6 +174,15 @@ module.exports = async function handler(req, res) {
   }
 
   const { isbn, title, author } = req.query;
+  if (!isbn && title) {
+    try {
+      const [match] = await lookupBatch([{ title: String(title), author: String(author || '') }]);
+      res.status(200).json(match || { rating: null });
+    } catch (e) {
+      res.status(200).json({ rating: null, reason: e.message });
+    }
+    return;
+  }
   let query = '';
   if (isbn) query = String(isbn);
   else if (title) query = author ? `${title} ${author}` : String(title);
@@ -178,7 +210,7 @@ module.exports = async function handler(req, res) {
       return;
     }
     const doc = extractFirstHit(gqlData?.data?.search?.results);
-    if (!doc || typeof doc.rating !== 'number') {
+    if (!doc || !(Number(doc.rating) > 0)) {
       res.status(200).json({ rating: null });
       return;
     }
