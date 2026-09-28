@@ -13,7 +13,7 @@
    for free. The one exception is syncNow() below, used by the manual
    "Sync Now" button in Settings — by the time that runs, storage.js
    is already past its own first open(), so it's safe for it to go
-   through the normal Storage.exportAll()/importAll() instead.
+   through the normal Storage.exportForSync()/importAll() instead.
 
    This is whole-library, last-write-wins sync, not per-field merging:
    if you edit on two devices before either has synced, whichever
@@ -57,12 +57,16 @@ const Sync = (() => {
     return body && body.data ? body : null;
   }
 
-  /** POST a full snapshot (the shape from Storage.exportAll(), minus covers) to the server. */
-  async function pushSnapshot(snapshot) {
+  /** POST a full snapshot (the shape from Storage.exportForSync()) to the server.
+   *  `keepalive` lets a push started right as the tab is closing/hiding still
+   *  reach the server after the page itself is gone — see storage.js's
+   *  flushPush(). */
+  async function pushSnapshot(snapshot, { keepalive = false } = {}) {
     const res = await fetch('/api/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
       body: JSON.stringify(snapshot),
+      keepalive,
     });
     if (!res.ok) throw new Error(`Sync push failed (${res.status})`);
     return res.json();
@@ -81,8 +85,7 @@ const Sync = (() => {
     } catch (e) {
       console.warn('Sync Now: pull step failed, pushing local data anyway:', e.message);
     }
-    const snapshot = await Storage.exportAll();
-    delete snapshot.covers;
+    const snapshot = await Storage.exportForSync();
     const { updatedAt } = await pushSnapshot(snapshot);
     recordSyncedAt(updatedAt);
   }

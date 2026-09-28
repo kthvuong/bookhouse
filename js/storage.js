@@ -23,10 +23,15 @@
    page load (before anything reads the DB) if Sync is configured and
    newer than what's local, and put()/remove()/clearStore() schedule a
    debounced push after any write — so every Storage.* method gets
-   sync for free without being touched individually. Covers aren't
-   synced (blobs stay device-local); everything else round-trips
-   through the same exportAll()/importAll() shape used by the manual
-   JSON backup in Settings.
+   sync for free without being touched individually. A visibilitychange/
+   pagehide listener flushes that push immediately (instead of waiting
+   out the debounce) the moment the tab is hidden or navigated away
+   from, and re-pulls when the tab comes back to the front — see the
+   comments around flushPush()/pullIfNewer() below for why. Covers
+   aren't synced (blobs stay device-local); everything else round-trips
+   through the same exportForSync()/importAll() shape used by the
+   manual JSON backup in Settings (exportAll(), which also includes
+   covers).
    ============================================================ */
 
 const Storage = (() => {
@@ -112,43 +117,87 @@ const Storage = (() => {
     return typeof Sync !== 'undefined' && Sync.isConfigured();
   }
 
+  // Shared by the once-per-load pull in open() and the catch-up pull on tab
+  // refocus below: apply the cloud snapshot only if it's actually newer than
+  // what this device last saw. Guarded against overlapping calls.
+  let pullInFlight = null;
+  function pullIfNewer(db) {
+    if (!syncAvailable()) return Promise.resolve();
+    if (pullInFlight) return pullInFlight;
+    pullInFlight = (async () => {
+      try {
+        const remote = await Sync.fetchRemote();
+        const localWatermark = Sync.getLastSyncedAt();
+        if (remote && remote.data && (!localWatermark || remote.updatedAt > localWatermark)) {
+          await applySnapshotRaw(db, remote.data);
+          Sync.recordSyncedAt(remote.updatedAt);
+        }
+      } catch (e) {
+        console.warn('Sync pull skipped:', e.message);
+      } finally {
+        pullInFlight = null;
+      }
+    })();
+    return pullInFlight;
+  }
+
   let readyPromise = null;
   function open() {
     if (readyPromise) return readyPromise;
     readyPromise = openDB().then(async (db) => {
-      if (syncAvailable()) {
-        try {
-          const remote = await Sync.fetchRemote();
-          const localWatermark = Sync.getLastSyncedAt();
-          if (remote && remote.data && (!localWatermark || remote.updatedAt > localWatermark)) {
-            await applySnapshotRaw(db, remote.data);
-            Sync.recordSyncedAt(remote.updatedAt);
-          }
-        } catch (e) {
-          console.warn('Sync pull skipped:', e.message);
-        }
-      }
+      await pullIfNewer(db);
       return db;
     });
     return readyPromise;
   }
 
-  // Batches rapid successive writes into one push a couple seconds after
-  // the last one, instead of a network round-trip per keystroke/click.
+  // Batches rapid successive writes into one push a couple seconds after the
+  // last one, instead of a network round-trip per keystroke/click. A timer
+  // alone isn't enough on a multi-page site, though: actions like "remove
+  // book" or "add book" navigate to a different page right after writing,
+  // which tears down this timer before it ever fires — silently dropping
+  // the sync. The visibilitychange/pagehide listeners below are the safety
+  // net: the moment the tab is hidden or navigated away from, any pending
+  // push is sent immediately with `keepalive` so the request survives the
+  // page going away, instead of waiting out the rest of the debounce.
   let pushTimer = null;
+  let pushDirty = false;
+
+  async function flushPush({ keepalive = false } = {}) {
+    if (!syncAvailable() || !pushDirty) return;
+    clearTimeout(pushTimer);
+    pushDirty = false;
+    try {
+      const snapshot = await exportForSync();
+      const { updatedAt } = await Sync.pushSnapshot(snapshot, { keepalive });
+      Sync.recordSyncedAt(updatedAt);
+    } catch (e) {
+      pushDirty = true; // retried on the next write, or the next time the tab hides
+      console.warn('Auto-sync push failed:', e.message);
+    }
+  }
+
   function scheduleAutoPush() {
     if (!syncAvailable()) return;
+    pushDirty = true;
     clearTimeout(pushTimer);
-    pushTimer = setTimeout(async () => {
-      try {
-        const snapshot = await exportAll();
-        delete snapshot.covers;
-        const { updatedAt } = await Sync.pushSnapshot(snapshot);
-        Sync.recordSyncedAt(updatedAt);
-      } catch (e) {
-        console.warn('Auto-sync push failed:', e.message);
+    pushTimer = setTimeout(() => flushPush(), 2500);
+  }
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        flushPush({ keepalive: true });
+      } else if (syncAvailable()) {
+        // Catches up a tab left open in the background while another device
+        // made changes, instead of it showing stale data until next reload.
+        openDB().then(pullIfNewer);
       }
-    }, 2500);
+    });
+    // Belt-and-suspenders alongside visibilitychange: some browsers fire
+    // pagehide (an actual navigation or tab close) without a preceding
+    // 'hidden' visibility event.
+    window.addEventListener('pagehide', () => flushPush({ keepalive: true }));
   }
 
   function tx(storeNames, mode = 'readonly') {
@@ -448,7 +497,7 @@ const Storage = (() => {
     remove: (year) => remove('wrapped', String(year)),
   };
 
-  async function exportAll() {
+  async function collectSyncedStores() {
     const [books, entries, progress, sessions, quotes, collections, collectionItems, goals, wrapped] =
       await Promise.all([
         getAll('books'),
@@ -461,7 +510,25 @@ const Storage = (() => {
         getAll('goals'),
         getAll('wrapped'),
       ]);
+    return {
+      books, readingEntries: entries, progressUpdates: progress, readingSessions: sessions,
+      quotes, collections, collectionItems, goals, wrapped,
+    };
+  }
 
+  /** Everything that round-trips through sync — no covers. Those stay
+   *  device-local, and every push discards them anyway (see flushPush
+   *  above), so this skips re-encoding cover blobs as data URLs for nothing. */
+  async function exportForSync() {
+    return {
+      meta: { app: 'reading-tracker', version: DB_VERSION, exportedAt: nowIso() },
+      ...(await collectSyncedStores()),
+    };
+  }
+
+  /** Full backup including covers — used by Settings' manual JSON export. */
+  async function exportAll() {
+    const base = await collectSyncedStores();
     const coverRows = await getAll('covers');
     const covers = await Promise.all(
       coverRows.map(
@@ -476,8 +543,8 @@ const Storage = (() => {
 
     return {
       meta: { app: 'reading-tracker', version: DB_VERSION, exportedAt: nowIso() },
-      books, readingEntries: entries, progressUpdates: progress, readingSessions: sessions,
-      quotes, collections, collectionItems, goals, wrapped, covers,
+      ...base,
+      covers,
     };
   }
 
@@ -511,6 +578,6 @@ const Storage = (() => {
     uid, nowIso, open,
     Books, Covers, ReadingEntries, ProgressUpdates, ReadingSessions, Quotes,
     Collections, Goals, Wrapped,
-    exportAll, importAll,
+    exportAll, exportForSync, importAll,
   };
 })();
