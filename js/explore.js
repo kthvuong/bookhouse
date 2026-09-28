@@ -188,6 +188,20 @@
   }
 
   function wireRailNav() {
+    container.querySelectorAll('.rail-nav').forEach((navEl) => {
+      const prevBtn = navEl.querySelector('[data-dir="-1"]');
+      const railId = prevBtn && prevBtn.dataset.railScroll;
+      const rail = railId && document.getElementById(railId);
+      if (!rail || !prevBtn) return;
+      // "Back" dims out once there's nothing behind to scroll to — same
+      // forward/back weighting as Fable's carousel arrows (see explore.css).
+      // "Forward" stays the confident solid button always: a rail almost
+      // always has more to reveal (show-more tile / fetchNext), so there's
+      // no reliable "truly exhausted" moment worth tracking here.
+      const updatePrev = () => { prevBtn.disabled = rail.scrollLeft <= 4; };
+      rail.addEventListener('scroll', updatePrev);
+      updatePrev();
+    });
     container.querySelectorAll('[data-rail-scroll]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const rail = document.getElementById(btn.dataset.railScroll);

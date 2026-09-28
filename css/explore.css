@@ -21,8 +21,8 @@
   gap: var(--space-4);
   margin-bottom: var(--space-4);
 }
-.explore-section-heading h2 { font-size: 22px; }
-.explore-section-heading p { color: var(--text-secondary); font-size: 13.5px; margin-top: 4px; }
+.explore-section-heading h2 { font-size: 26px; letter-spacing: -0.015em; }
+.explore-section-heading p { color: var(--text-secondary); font-size: 13.5px; margin-top: 5px; }
 
 .rail-nav { display: flex; gap: 8px; flex-shrink: 0; }
 .rail-nav-btn {
@@ -30,8 +30,20 @@
   border: 1px solid var(--border-strong); background: var(--surface);
   cursor: pointer; display: flex; align-items: center; justify-content: center;
   color: var(--text-secondary); font-size: 18px; line-height: 1;
+  transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast), transform var(--dur-fast);
 }
 .rail-nav-btn:hover { background: var(--surface-hover); }
+.rail-nav-btn:active { transform: scale(0.92); }
+/* The "forward" direction reads as the primary action, filled solid — the
+   same forward/back weighting as Fable's carousel arrows — while "back"
+   stays a quiet outline until it's actually reachable. */
+.rail-nav-btn[data-dir="1"] {
+  background: var(--text-primary); border-color: var(--text-primary); color: var(--bg);
+}
+.rail-nav-btn[data-dir="1"]:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+.rail-nav-btn[data-dir="-1"]:disabled {
+  opacity: 0.4; cursor: default;
+}
 
 @media (max-width: 860px) {
   .rail-nav { display: none; }

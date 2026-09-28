@@ -125,7 +125,7 @@
 }
 .search-result-row:hover { background: var(--surface-hover); }
 .search-result-row .thumb {
-  width: 34px; height: 50px; object-fit: cover; border-radius: 3px;
+  width: 34px; height: 50px; object-fit: cover; border-radius: 6px;
   background: var(--border); flex-shrink: 0;
   box-shadow: var(--shadow-sm);
 }
@@ -158,7 +158,7 @@
 }
 .ab-result-row:hover { background: var(--surface-hover); }
 .ab-result-row .thumb {
-  width: 34px; height: 50px; object-fit: cover; border-radius: 3px;
+  width: 34px; height: 50px; object-fit: cover; border-radius: 6px;
   background: var(--border); flex-shrink: 0; box-shadow: var(--shadow-sm);
 }
 .ab-result-row .meta { min-width: 0; flex: 1; }
@@ -185,7 +185,7 @@
 
 .ab-preview-row { display: flex; gap: 14px; align-items: center; margin-bottom: 20px; }
 .ab-preview-row .cover-wrap {
-  width: 64px; flex-shrink: 0; aspect-ratio: 2/3; border-radius: 5px; overflow: hidden;
+  width: 64px; flex-shrink: 0; aspect-ratio: 2/3; border-radius: 8px; overflow: hidden;
   box-shadow: var(--shadow-md); background: var(--surface-hover); position: relative;
 }
 .ab-preview-row .title { font-weight: 600; font-size: 15.5px; }
@@ -233,7 +233,7 @@
 .book-card .cover-wrap {
   position: relative;
   aspect-ratio: 2 / 3;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--surface-hover);
   box-shadow: var(--shadow-md);
@@ -284,7 +284,7 @@
 }
 .book-row:hover { background: var(--surface-hover); }
 .book-row .thumb {
-  width: 42px; height: 62px; object-fit: cover; border-radius: 4px;
+  width: 42px; height: 62px; object-fit: cover; border-radius: 7px;
   background: var(--surface-hover); flex-shrink: 0; box-shadow: var(--shadow-sm);
 }
 .book-row .col-title { flex: 2.2; min-width: 140px; }
