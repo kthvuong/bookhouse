@@ -56,14 +56,29 @@ const TAB_ICONS = {
   settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15 1.65 1.65 0 0 0 3.17 14H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>',
 };
 
+/* Phones get four destinations with Add in the middle, where a thumb rests.
+   Settings is rarely needed day to day, so on phones it lives behind the
+   gear in the header instead of taking a tab. */
+const MOBILE_TAB_KEYS = ['home', 'library', 'explore', 'stats'];
+
 function renderMobileTabBar(activeKey) {
+  const tab = (key) => {
+    const item = NAV_ITEMS.find((i) => i.key === key);
+    const active = item.key === activeKey;
+    return `
+      <a href="${item.href}" class="tab-item ${active ? 'active' : ''}"${active ? ' aria-current="page"' : ''}>
+        <span class="tab-icon">${TAB_ICONS[item.key] || ''}</span>
+        <span class="tab-label">${item.label}</span>
+      </a>`;
+  };
+  const [first, second, ...rest] = MOBILE_TAB_KEYS;
   return `
-    <nav class="mobile-tab-bar">
-      ${NAV_ITEMS.map((item) => `
-        <a href="${item.href}" class="tab-item ${item.key === activeKey ? 'active' : ''}">
-          ${TAB_ICONS[item.key] || ''}
-          <span>${item.label}</span>
-        </a>`).join('')}
+    <nav class="mobile-tab-bar" aria-label="Main">
+      ${tab(first)}${tab(second)}
+      <button type="button" class="tab-add" id="tab-add-btn" aria-label="Add a book">
+        <span class="tab-add-circle">${ICONS.plus}</span>
+      </button>
+      ${rest.map(tab).join('')}
     </nav>`;
 }
 
@@ -75,6 +90,7 @@ function toggleTheme() {
   const next = currentTheme() === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
   try { localStorage.setItem('theme', next); } catch (e) {}
+  if (typeof syncThemeColor === 'function') syncThemeColor(next);
   const btn = document.getElementById('theme-toggle-btn');
   if (btn) btn.innerHTML = next === 'dark' ? ICONS.sun : ICONS.moon;
 }
@@ -100,10 +116,10 @@ function initHeader(activeKey) {
         <button class="btn btn-ghost btn-icon search-toggle-btn" id="search-toggle-btn" aria-label="Search">${ICONS.search}</button>
         <button class="btn btn-primary btn-sm" id="add-book-btn">${ICONS.plus}<span>Add Book</span></button>
         <button class="btn btn-ghost btn-icon" id="theme-toggle-btn" title="Toggle theme" aria-label="Toggle theme">${currentTheme() === 'dark' ? ICONS.sun : ICONS.moon}</button>
+        <a class="btn btn-ghost btn-icon header-settings-link ${activeKey === 'settings' ? 'active' : ''}" href="settings.html" aria-label="Settings"${activeKey === 'settings' ? ' aria-current="page"' : ''}>${TAB_ICONS.settings}</a>
       </div>
     </header>
     ${renderMobileTabBar(activeKey)}
-    <button class="btn-fab" id="add-book-fab" aria-label="Add Book">${ICONS.plus}</button>
   `;
 
   document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
@@ -116,7 +132,7 @@ function initHeader(activeKey) {
     }
   });
 
-  document.getElementById('add-book-fab').addEventListener('click', () => {
+  document.getElementById('tab-add-btn').addEventListener('click', () => {
     AddBookFlow.open();
   });
 
@@ -125,6 +141,74 @@ function initHeader(activeKey) {
   });
 
   initGlobalSearch();
+  trackKeyboard();
+  enableSheetSwipe();
+}
+
+/* Adds body.keyboard-open while a text field has focus, so the phone tab
+   bar can step aside (Android lifts fixed bars above the keyboard, right
+   over whatever is being typed into). */
+function trackKeyboard() {
+  const NON_TEXT = ['checkbox', 'radio', 'button', 'submit', 'reset', 'range', 'file', 'color'];
+  const isTextField = (el) => !!el && (
+    el.matches('textarea, select, [contenteditable="true"]') ||
+    (el.matches('input') && !NON_TEXT.includes(el.type))
+  );
+  document.addEventListener('focusin', (e) => {
+    if (isTextField(e.target)) document.body.classList.add('keyboard-open');
+  });
+  document.addEventListener('focusout', () => {
+    setTimeout(() => {
+      if (!isTextField(document.activeElement)) document.body.classList.remove('keyboard-open');
+    }, 80);
+  });
+}
+
+/* Phones show modals as bottom sheets (components.css). Dragging a sheet
+   down from its top dismisses it, the way native sheets work. It closes by
+   "clicking" the backdrop, so each modal's own close/skip logic still runs.
+   The non-passive touchmove listener is only attached for the duration of
+   a drag, so ordinary page scrolling is never blocked. */
+function enableSheetSwipe() {
+  const phone = window.matchMedia('(max-width: 640px)');
+  let sheet = null, scroller = null, startY = 0, dy = 0, dragging = false;
+
+  const onMove = (e) => {
+    dy = e.touches[0].clientY - startY;
+    if (!dragging) {
+      if (dy > 10 && scroller.scrollTop <= 0) dragging = true;
+      else if (dy < -4 || scroller.scrollTop > 0) { finish(); return; }
+      else return;
+    }
+    e.preventDefault();
+    sheet.style.transition = 'none';
+    sheet.style.transform = `translateY(${Math.max(0, dy)}px)`;
+  };
+
+  const finish = () => {
+    if (!sheet) return;
+    const s = sheet;
+    s.removeEventListener('touchmove', onMove);
+    s.style.transition = '';
+    s.style.transform = '';
+    if (dragging && dy > 90) {
+      s.closest('.modal-overlay').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    }
+    sheet = null; scroller = null; dragging = false;
+  };
+
+  document.addEventListener('touchstart', (e) => {
+    if (!phone.matches || e.touches.length !== 1) return;
+    const s = e.target.closest('.modal-overlay.open .modal');
+    if (!s || e.target.closest('input, textarea, select, [contenteditable="true"], .rail, .star-input')) return;
+    // Stepped modals scroll an inner body rather than the sheet itself.
+    const sc = e.target.closest('.modal-scroll-body') || s;
+    if (sc.scrollTop > 0) return;
+    sheet = s; scroller = sc; startY = e.touches[0].clientY; dy = 0; dragging = false;
+    s.addEventListener('touchmove', onMove, { passive: false });
+  }, { passive: true });
+  document.addEventListener('touchend', finish);
+  document.addEventListener('touchcancel', finish);
 }
 
 function closeMobileSearch() {

@@ -19,7 +19,6 @@
   border-color: var(--border-strong);
   transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast), box-shadow var(--dur-fast), border-color var(--dur-fast);
 }
-.btn:hover { background: var(--surface-hover); }
 .btn:active { transform: scale(0.97); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
@@ -28,14 +27,22 @@
   border-color: var(--accent);
   color: #fff9f2;
 }
-.btn-primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
 
 .btn-ghost {
   background: transparent;
   border-color: transparent;
   color: var(--text-secondary);
 }
-.btn-ghost:hover { background: var(--surface-hover); color: var(--text-primary); }
+
+/* Hover styles only where there's a real pointer: on a phone, :hover
+   sticks after a tap and leaves buttons looking stuck "pressed". */
+@media (hover: hover) {
+  .btn:hover { background: var(--surface-hover); }
+  .btn-primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+  .btn-ghost:hover { background: var(--surface-hover); color: var(--text-primary); }
+}
+.btn-primary:active { background: var(--accent-strong); border-color: var(--accent-strong); }
+.btn-ghost:active { background: var(--surface-hover); }
 
 .btn-sm { padding: 7px 13px; font-size: 13px; }
 .btn-icon {
@@ -239,7 +246,10 @@
   box-shadow: var(--shadow-md);
   transition: transform var(--dur-med) var(--ease-out), box-shadow var(--dur-med) var(--ease-out);
 }
-.book-card:hover .cover-wrap { transform: translateY(-4px) rotate(-0.4deg); box-shadow: var(--shadow-lg); }
+@media (hover: hover) {
+  .book-card:hover .cover-wrap { transform: translateY(-4px) rotate(-0.4deg); box-shadow: var(--shadow-lg); }
+}
+.book-card:active .cover-wrap { transform: scale(0.97); }
 .book-card .cover-wrap img { width: 100%; height: 100%; object-fit: cover; }
 .book-card .cover-fallback {
   width: 100%; height: 100%;
@@ -435,6 +445,7 @@
 }
 .modal-overlay.open .modal { transform: translateY(0) scale(1); }
 .modal.wide { max-width: 720px; }
+.modal.modal-narrow { max-width: 380px; }
 .modal-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: var(--space-5) var(--space-5) 0;
@@ -444,6 +455,46 @@
 .modal-footer {
   display: flex; justify-content: flex-end; gap: 10px;
   padding: var(--space-4) var(--space-5) var(--space-5);
+}
+
+/* Phones: every modal becomes a bottom sheet — anchored where thumbs are,
+   sized to the *visible* screen (dvh, so Safari's toolbar can't push the
+   buttons out of reach), with its actions pinned to the bottom. Drag it
+   down from the top to dismiss (see enableSheetSwipe in nav.js). */
+@media (max-width: 640px) {
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal,
+  .modal.wide,
+  .modal.modal-narrow,
+  .modal.stepped {
+    max-width: none;
+    max-height: 92vh;
+    max-height: 92dvh;
+    border-radius: 22px 22px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    transform: translateY(100%);
+    overscroll-behavior: contain;
+  }
+  .modal-overlay.open .modal { transform: none; }
+  .modal::before {
+    content: '';
+    display: block;
+    flex-shrink: 0;
+    width: 38px; height: 5px;
+    margin: 8px auto 0;
+    border-radius: 3px;
+    background: var(--border-strong);
+  }
+  .modal-header { padding-top: var(--space-3); }
+  .modal-footer {
+    position: sticky;
+    bottom: 0;
+    background: var(--bg-elevated);
+    border-top: 1px solid var(--border);
+    padding-bottom: var(--space-4);
+  }
+  .modal-footer .btn { flex: 1; }
+  .modal.stepped .modal-scroll-body { overscroll-behavior: contain; }
 }
 
 /* ---------- Book synopsis text ----------
@@ -466,7 +517,7 @@
   transition: bottom var(--dur-med) var(--ease-out);
 }
 @media (max-width: 860px) {
-  .toast-wrap { bottom: calc(var(--mobile-tabbar-height) + 12px); }
+  .toast-wrap { bottom: calc(var(--mobile-tabbar-height) + env(safe-area-inset-bottom) + 12px); }
 }
 .toast {
   background: var(--text-primary); color: var(--bg);
@@ -525,3 +576,18 @@
 
 .fade-in { animation: fade-in var(--dur-med) var(--ease-out) both; }
 @keyframes fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ---------- Touch sizing (phones & tablets) ----------
+   Kept last in the file so it wins over the base component rules above.
+   44px is Apple's minimum comfortable tap target. */
+@media (max-width: 860px) {
+  .btn { min-height: 44px; }
+  .btn-sm { min-height: 40px; }
+  .btn-icon { width: 44px; height: 44px; min-height: 0; }
+  .segmented button { padding: 10px 16px; }
+  .menu button, .menu a { padding: 12px; }
+  button.chip, a.chip { min-height: 38px; padding: 8px 15px; }
+  .chip button { padding: 6px; margin: -6px -6px -6px 0; }
+  .star-input .star-slot,
+  .star-input .star-slot svg { width: 34px; height: 34px; }
+}

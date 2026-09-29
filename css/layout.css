@@ -6,11 +6,14 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  height: var(--header-height);
+  /* The safe-area insets are 0 in a normal browser tab; they only kick in
+     when Bookhouse runs full-screen from the iPhone home screen, where the
+     header has to sit below the status bar and clear the notch. */
+  height: calc(var(--header-height) + env(safe-area-inset-top));
   display: flex;
   align-items: center;
   gap: var(--space-5);
-  padding: 0 var(--space-6);
+  padding: env(safe-area-inset-top) var(--space-6) 0;
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
@@ -59,15 +62,14 @@
   flex-shrink: 0;
 }
 
-.header-actions .search-toggle-btn {
+.header-actions .search-toggle-btn,
+.header-actions .header-settings-link {
   display: none;
 }
+.header-settings-link svg { width: 19px; height: 19px; }
+.header-settings-link.active { color: var(--accent-strong); background: var(--accent-tint); }
 
 .mobile-tab-bar {
-  display: none;
-}
-
-.btn-fab {
   display: none;
 }
 
@@ -142,6 +144,9 @@
   font-size: 13.5px;
   font-weight: 600;
   color: var(--accent);
+  /* A bigger tap area than the text itself, without moving the layout. */
+  padding: 12px 0 12px 16px;
+  margin: -12px 0 -12px -16px;
 }
 
 /* ---- responsive grids ---- */
@@ -161,40 +166,119 @@
 .rail::-webkit-scrollbar { height: 8px; }
 .rail > * { scroll-snap-align: start; flex-shrink: 0; }
 
+/* minmax(0, …) rather than plain fr: a plain fr column can't shrink below
+   its content's natural width, so a horizontally scrolling rail inside it
+   (three or more Currently Reading books, say) would stretch the whole
+   column past the edge of a phone screen instead of scrolling. */
 .two-col {
   display: grid;
-  grid-template-columns: 1.6fr 1fr;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
   gap: var(--space-7);
 }
 
 @media (max-width: 980px) {
-  .two-col { grid-template-columns: 1fr; }
+  .two-col { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Full-screen home-screen app mode: the status bar is transparent, so give
+   it a solid strip to sit on once the header has scrolled away. The inset
+   is 0 in a normal browser tab, where this draws nothing. */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: env(safe-area-inset-top);
+  background: var(--bg);
+  z-index: 90;
+  pointer-events: none;
 }
 
 @media (max-width: 860px) {
-  .app-header { padding: 0 var(--space-4); gap: var(--space-3); }
+  .app-header {
+    padding-left: max(var(--space-4), env(safe-area-inset-left));
+    padding-right: max(var(--space-4), env(safe-area-inset-right));
+    gap: var(--space-3);
+  }
+  .section { margin-bottom: var(--space-7); }
+  .brand { padding-block: 6px; }
   .main-nav { display: none; }
-  .page-shell { padding: var(--space-5) var(--space-4) var(--space-8); }
+  .page-shell {
+    padding: var(--space-5) max(var(--space-4), env(safe-area-inset-right)) var(--space-8) max(var(--space-4), env(safe-area-inset-left));
+  }
+  .header-actions .header-settings-link { display: inline-flex; }
 
+  /* Horizontal rails run to the screen edge on phones (like a native app)
+     instead of stopping at the page padding, while still starting aligned. */
+  .rail,
+  .library-subnav {
+    margin-inline: calc(-1 * max(var(--space-4), env(safe-area-inset-left)));
+    padding-inline: max(var(--space-4), env(safe-area-inset-left));
+    scroll-padding-inline: max(var(--space-4), env(safe-area-inset-left));
+  }
+  /* Swiped, not dragged — no desktop-style scrollbar under the rails. */
+  .rail { scrollbar-width: none; overscroll-behavior-x: contain; }
+  .rail::-webkit-scrollbar { display: none; }
+
+  /* ---- Bottom tab bar: four destinations with Add in the middle ----
+     Each tab fills its full slot (a big, easy target), the active tab gets
+     a tinted pill behind its icon, and the bar pads itself above the
+     iPhone home indicator so taps don't land in the system gesture area. */
   .mobile-tab-bar {
     display: flex;
+    align-items: stretch;
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
-    justify-content: space-around;
-    background: color-mix(in srgb, var(--bg-elevated) 97%, transparent);
-    backdrop-filter: blur(10px);
+    height: calc(var(--mobile-tabbar-height) + env(safe-area-inset-bottom));
+    padding: 0 max(6px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(6px, env(safe-area-inset-left));
+    background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+    -webkit-backdrop-filter: saturate(1.4) blur(14px);
+    backdrop-filter: saturate(1.4) blur(14px);
     border-top: 1px solid var(--border);
-    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    box-shadow: 0 -6px 20px -14px hsl(var(--shadow-color) / 0.35);
+    transition: transform var(--dur-med) var(--ease-out);
   }
-  .mobile-tab-bar .tab-item {
-    display: flex; flex-direction: column; align-items: center; gap: 3px;
-    flex: 1; padding: 6px 2px;
+  .tab-item {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
     color: var(--text-muted);
-    font-size: 10.5px; font-weight: 600;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.01em;
+    user-select: none; -webkit-user-select: none;
   }
-  .mobile-tab-bar .tab-item svg { width: 22px; height: 22px; }
-  .mobile-tab-bar .tab-item.active { color: var(--accent-strong); }
+  .tab-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 58px; height: 32px;
+    border-radius: var(--radius-pill);
+    transition: background var(--dur-fast), transform var(--dur-fast) var(--ease-out);
+  }
+  .tab-icon svg { width: 23px; height: 23px; }
+  .tab-item.active { color: var(--accent-strong); }
+  .tab-item.active .tab-icon { background: var(--accent-tint); }
+  .tab-item.active .tab-icon svg { stroke-width: 2.4; }
+  .tab-item:active .tab-icon { transform: scale(0.9); background: var(--surface-hover); }
 
-  body { padding-bottom: var(--mobile-tabbar-height); }
+  .tab-add {
+    flex: 1 1 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0; border: 0; background: none; cursor: pointer;
+    color: #fff9f2;
+  }
+  .tab-add-circle {
+    width: 54px; height: 54px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--accent);
+    border: 4px solid var(--bg-elevated);
+    box-shadow: 0 8px 18px -6px color-mix(in srgb, var(--accent) 70%, transparent);
+    transform: translateY(-12px);
+    transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast);
+  }
+  .tab-add-circle svg { width: 24px; height: 24px; }
+  .tab-add:active .tab-add-circle { transform: translateY(-12px) scale(0.92); background: var(--accent-strong); }
+
+  /* While typing, get the bar out of the way — Android lifts fixed bars
+     above the keyboard, where it would cover the field being edited. */
+  body.keyboard-open .mobile-tab-bar { transform: translateY(110%); }
+
+  body { padding-bottom: calc(var(--mobile-tabbar-height) + env(safe-area-inset-bottom)); }
 
   /* iOS Safari auto-zooms the page when focusing any text input/select
      smaller than 16px — this stops that (and the "cuts off the page"
@@ -204,35 +288,34 @@
   }
 
   #add-book-btn { display: none; }
-  .btn-fab {
-    display: flex; align-items: center; justify-content: center;
-    position: fixed; right: 18px; bottom: calc(var(--mobile-tabbar-height) + 16px);
-    z-index: 85;
-    width: 54px; height: 54px; border-radius: 50%;
-    background: var(--accent); color: #fff9f2; border: none; cursor: pointer;
-    box-shadow: var(--shadow-lg);
-  }
-  .btn-fab:active { transform: scale(0.94); }
-  .btn-fab svg { width: 24px; height: 24px; }
 }
 
 @media (max-width: 640px) {
-  .header-actions { gap: 4px; }
+  .header-actions { gap: 2px; }
   .search-box { display: none; }
   .header-actions .search-toggle-btn { display: flex; }
   .search-box.mobile-open {
     display: flex;
     position: fixed;
-    top: var(--header-height);
+    top: calc(var(--header-height) + env(safe-area-inset-top));
     left: 0; right: 0;
     width: 100%;
-    padding: 10px 16px;
+    padding: 10px max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
     background: var(--bg-elevated);
     border-bottom: 1px solid var(--border);
     box-shadow: var(--shadow-md);
     z-index: 55;
   }
-  .search-box.mobile-open input { flex: 1; min-width: 0; }
+  .search-box.mobile-open input { flex: 1; min-width: 0; padding-top: 11px; padding-bottom: 11px; }
+  .search-box.mobile-open .search-icon { left: calc(max(16px, env(safe-area-inset-left)) + 13px); }
+  /* Fills the space between the search field and the tab bar, measured
+     against the visible screen (dvh) so Safari's toolbar can't hide the end. */
+  .search-box.mobile-open .search-results-panel {
+    left: 8px; right: 8px;
+    max-height: calc(100vh - var(--header-height) - var(--mobile-tabbar-height) - 90px);
+    max-height: calc(100dvh - var(--header-height) - var(--mobile-tabbar-height) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 90px);
+  }
+  .search-result-row { padding-top: 11px; padding-bottom: 11px; }
 }
 
 @media (max-width: 560px) {

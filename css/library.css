@@ -44,3 +44,34 @@
 .result-count { font-size: 13px; color: var(--text-muted); margin-right: 4px; }
 
 .library-list { border-top: 1px solid var(--border); }
+
+/* The filter group only exists for phones; on wider screens its selects
+   sit in the bar exactly as if the wrapper weren't there. */
+.filter-scroll { display: contents; }
+
+@media (max-width: 860px) {
+  /* Phones: filters become one row you swipe sideways (instead of four
+     wrapped rows pushing the books off the first screen), with the count,
+     sort and view toggle on a tidy line underneath. */
+  .filter-bar { row-gap: 12px; padding-bottom: var(--space-4); margin-bottom: var(--space-5); }
+  .filter-scroll {
+    display: flex;
+    gap: 8px;
+    flex: 0 0 auto;
+    width: calc(100% + 2 * max(var(--space-4), env(safe-area-inset-left)));
+    margin-inline: calc(-1 * max(var(--space-4), env(safe-area-inset-left)));
+    padding-inline: max(var(--space-4), env(safe-area-inset-left));
+    overflow-x: auto;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+  .filter-scroll::-webkit-scrollbar { display: none; }
+  .filter-scroll .filter-select { flex-shrink: 0; }
+  .filter-bar .filter-select { min-height: 40px; }
+  .filter-bar .spacer { display: none; }
+  .filter-bar .result-count { margin-right: auto; }
+  /* A select is as wide as its longest option ("Newest publication"); cap
+     it so count, sort and the view toggle share one line on a phone. */
+  #sort-select { max-width: 164px; }
+  .view-toggle button { width: 40px; height: 40px; }
+}

@@ -16,10 +16,14 @@
 }
 .year-switcher button:hover { background: var(--surface-hover); }
 .year-switcher .year-figure { font-family: var(--font-serif); font-size: 26px; font-weight: 600; min-width: 80px; text-align: center; }
+@media (max-width: 860px) {
+  .year-switcher button { width: 44px; height: 44px; }
+}
 
 .month-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  /* min(…, 100%) so a tile never demands more than a small phone's width. */
+  grid-template-columns: repeat(auto-fill, minmax(min(290px, 100%), 1fr));
   gap: var(--space-5);
 }
 .month-tile {

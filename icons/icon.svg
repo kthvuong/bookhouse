@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Home-screen icon source (icons/*.png are rendered from this).
+       Same cottage mark as the favicon in js/config.js, scaled into the
+       middle ~60% so iOS's rounded mask and Android's circular mask
+       never clip it. Full-bleed background: the OS supplies the corners. -->
+  <rect width="512" height="512" fill="#f6f1e7"/>
+  <g transform="translate(96 100) scale(10)">
+    <path d="M5 17 L16 6.5 L27 17" fill="none" stroke="#b1583a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="8" y="16" width="16" height="11.5" rx="3" fill="#ecd3bf"/>
+    <rect x="13.3" y="20.8" width="5.4" height="6.7" rx="1.6" fill="#b1583a"/>
+    <circle cx="16" cy="12" r="1.9" fill="#c08a2e"/>
+  </g>
+</svg>

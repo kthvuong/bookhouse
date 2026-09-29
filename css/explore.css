@@ -47,6 +47,12 @@
 
 @media (max-width: 860px) {
   .rail-nav { display: none; }
+  /* Chips scroll edge to edge on phones, like the book rails below them. */
+  .genre-chip-row {
+    margin-inline: calc(-1 * max(var(--space-4), env(safe-area-inset-left)));
+    padding-inline: max(var(--space-4), env(safe-area-inset-left));
+    margin-bottom: var(--space-6);
+  }
 }
 
 .explore-rail .book-card { width: 150px; }

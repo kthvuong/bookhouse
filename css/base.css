@@ -97,8 +97,21 @@
 
 * , *::before, *::after { box-sizing: border-box; }
 
-html { color-scheme: light; overflow-x: hidden; }
+html {
+  color-scheme: light;
+  overflow-x: hidden;
+  /* Stops iOS Safari enlarging text when the phone is turned sideways. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
 html[data-theme="dark"] { color-scheme: dark; }
+
+/* Touch: no grey flash box on tap (controls show their own pressed state
+   instead), and no double-tap-to-zoom delay on anything tappable. */
+a, button, input, select, textarea, label, summary, [role="button"], [tabindex] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
 
 body {
   margin: 0;

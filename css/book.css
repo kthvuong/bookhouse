@@ -70,6 +70,13 @@
 .progress-history-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 13px; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
 .progress-history-row .remove-btn { opacity: 0; cursor: pointer; color: var(--text-muted); background: none; border: none; }
 .progress-history-row:hover .remove-btn { opacity: 1; }
+/* Touch screens have no hover, so the Remove button would stay invisible
+   (yet still tappable) — show it there, with a finger-sized hit area. */
+@media (hover: none) {
+  .progress-history-row { align-items: center; }
+  .progress-history-row .remove-btn { opacity: 0.8; padding: 10px 0 10px 16px; margin: -10px 0; }
+  .session-row .remove-btn { padding: 10px 4px 10px 16px; margin: -10px -4px -10px 0; }
+}
 
 /* ---- sessions ---- */
 .session-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
@@ -120,7 +127,12 @@
 .save-bar .btn-lg { flex-shrink: 0; }
 
 @media (max-width: 860px) {
-  .save-bar { bottom: var(--mobile-tabbar-height); }
+  /* Room at the end of the page for the save bar floating above the tab bar. */
+  main.page-shell { padding-bottom: calc(var(--space-6) + 84px); }
+  .save-bar { bottom: calc(var(--mobile-tabbar-height) + env(safe-area-inset-bottom)); transition: bottom var(--dur-med) var(--ease-out); }
+  /* The tab bar steps aside while typing (nav.js), so the save bar drops
+     to the bottom edge — keeping Save reachable right above the keyboard. */
+  body.keyboard-open .save-bar { bottom: env(safe-area-inset-bottom); }
 }
 
 @media (max-width: 720px) {

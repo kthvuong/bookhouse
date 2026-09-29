@@ -383,7 +383,7 @@ function promptFinishedRating(book) {
     overlay.className = 'modal-overlay';
     const cover = await coverMarkup(book);
     overlay.innerHTML = `
-      <div class="modal" style="max-width:380px;" role="dialog" aria-modal="true">
+      <div class="modal modal-narrow" role="dialog" aria-modal="true">
         <div class="modal-body finished-popup">
           <div class="finished-popup-cover">${cover}</div>
           <div class="eyebrow" style="margin-top:14px;">Marked as Finished</div>

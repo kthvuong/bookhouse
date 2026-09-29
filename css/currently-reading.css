@@ -28,4 +28,4 @@
 .cr-item .progress-meta { margin-bottom: 14px; }
 .cr-item .quick-update-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .cr-item .quick-update-row input { width: 100px; }
-.cr-item .quick-update-row .detail-link { margin-left: auto; font-size: 13px; font-weight: 600; color: var(--accent); }
+.cr-item .quick-update-row .detail-link { margin-left: auto; font-size: 13px; font-weight: 600; color: var(--accent); padding: 12px 0 12px 12px; margin-top: -12px; margin-bottom: -12px; }
