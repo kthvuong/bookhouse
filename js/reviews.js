@@ -8,30 +8,29 @@
    Bearer token as sync (js/sync.js) — one token unlocks both, so
    there's no separate field to set up for this.
 
-   Only the aggregate community rating (average + count) is fetched,
-   never other users' review text — that's their own data, and
-   Hardcover's terms don't allow a third party to redistribute it.
+   Only the aggregate community rating (average + count) and the book's
+   own catalog description are fetched — never other users' review text,
+   that's their own data, and Hardcover's terms don't allow a third party
+   to redistribute it.
    ============================================================ */
 
 const Reviews = (() => {
   const cache = new Map();
 
   async function fetchRating(book) {
-    if (!book || (typeof Sync === 'undefined') || !Sync.isConfigured()) return null;
+    if (!book || !book.title || (typeof Sync === 'undefined') || !Sync.isConfigured()) return null;
 
+    // The server matches by title+author (Hardcover's book-level rows aren't
+    // indexed by ISBN — editions are), but ISBN is still the better cache
+    // key here when we have it: two editions can share an ISBN-less title
+    // match yet be genuinely different printings, and ISBN is the one
+    // identifier that's unambiguous.
     const isbn = book.isbn13 || book.isbn10 || '';
     const cacheKey = isbn || `${book.title}|${(book.authors || [])[0] || ''}`;
     if (cache.has(cacheKey)) return cache.get(cacheKey);
 
-    const params = new URLSearchParams();
-    if (isbn) {
-      params.set('isbn', isbn);
-    } else if (book.title) {
-      params.set('title', book.title);
-      if (book.authors && book.authors[0]) params.set('author', book.authors[0]);
-    } else {
-      return null;
-    }
+    const params = new URLSearchParams({ title: book.title });
+    if (book.authors && book.authors[0]) params.set('author', book.authors[0]);
 
     let result = null;
     try {
@@ -40,6 +39,9 @@ const Reviews = (() => {
       });
       if (res.ok) {
         const data = await res.json();
+        // The server only ever returns a match (rating + description
+        // together) once it's passed the rating/author checks in
+        // api/_hardcover-match.js — so checking rating alone is enough here.
         if (data && typeof data.rating === 'number') result = data;
       }
     } catch (e) {
@@ -53,7 +55,7 @@ const Reviews = (() => {
   const batchKey = (b) => `t:${b.title}|${(b.authors || [])[0] || ''}`;
 
   /** Looks up many books in as few requests as possible (one per 24).
-   *  Returns an array aligned to `books` of { rating, ratingsCount, hardcoverUrl } | null.
+   *  Returns an array aligned to `books` of { rating, ratingsCount, hardcoverUrl, description } | null.
    *  Failures are never cached, so a blip doesn't hide a rating for the whole session. */
   async function fetchBatch(books) {
     const out = new Array(books.length).fill(null);

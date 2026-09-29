@@ -1,13 +1,13 @@
 /* ============================================================
    api/reviews.js — Vercel serverless function.
 
-   Proxies a book-rating lookup to Hardcover's GraphQL API. Hardcover's
-   own docs explicitly forbid calling their API from a browser (the
-   token would be exposed) and forbid a third party from
-   redistributing other users' review/rating data — this only ever
-   returns the book's own aggregate community rating (average +
-   count), which their policy treats as allowed aggregate data, not
-   user-owned data.
+   Proxies a book lookup to Hardcover's GraphQL API. Hardcover's own docs
+   explicitly forbid calling their API from a browser (the token would be
+   exposed) and forbid a third party from redistributing other users'
+   review/rating data — this only ever returns the book's own aggregate
+   community rating (average + count) and its catalog description, which
+   their policy treats as allowed aggregate/bibliographic data, never a
+   specific user's review text.
 
    Protected by the same shared secret as api/sync.js (env var
    SYNC_TOKEN) — one token gates the whole backend, not just sync.
@@ -45,7 +45,7 @@ function likeEscape(s) {
 
 function batchQuery(count, withAuthors) {
   const vars = Array.from({ length: count }, (_, i) => `$p${i}: String!, $e${i}: [String!]!`).join(', ');
-  const fields = `title slug rating ratings_count users_count ${withAuthors ? 'contributions(limit: 4) { author { name } }' : ''}`;
+  const fields = `title slug rating ratings_count users_count description ${withAuthors ? 'contributions(limit: 4) { author { name } }' : ''}`;
   const lookups = Array.from({ length: count }, (_, i) => `
       b${i}: books(where: { _or: [{ title: { _ilike: $p${i} } }, { title: { _in: $e${i} } }] },
         order_by: { users_count: desc }, limit: ${PER_LOOKUP}) { ${fields} }`).join('');
@@ -79,7 +79,7 @@ async function queryGroup(group) {
   return group.map((b, i) => pickMatches([b], out.data[`b${i}`] || [])[0]);
 }
 
-/** Returns an array aligned to `books` of { rating, ratingsCount, hardcoverUrl } | null,
+/** Returns an array aligned to `books` of { rating, ratingsCount, hardcoverUrl, description } | null,
  *  with `undefined` for any book whose request failed (so callers don't cache a
  *  failure as "no match"). */
 async function queryHardcover(books) {
@@ -136,23 +136,6 @@ async function handleBatch(req, res) {
   }
 }
 
-const SEARCH_QUERY = `
-  query FindBook($q: String!) {
-    search(query: $q, query_type: "Book", per_page: 1) {
-      results
-    }
-  }`;
-
-function extractFirstHit(results) {
-  // `results` is Typesense's raw response, passed through as JSON by
-  // Hardcover's API — normally { hits: [{ document: {...} }], ... }.
-  // Parsed defensively since this is undocumented wire shape.
-  if (!results) return null;
-  const hits = results.hits || (results.results && results.results[0] && results.results[0].hits);
-  if (!Array.isArray(hits) || !hits.length) return null;
-  return hits[0].document || hits[0];
-}
-
 module.exports = async function handler(req, res) {
   const authHeader = req.headers.authorization || '';
   const providedToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
@@ -173,52 +156,18 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const { isbn, title, author } = req.query;
-  if (!isbn && title) {
-    try {
-      const [match] = await lookupBatch([{ title: String(title), author: String(author || '') }]);
-      res.status(200).json(match || { rating: null });
-    } catch (e) {
-      res.status(200).json({ rating: null, reason: e.message });
-    }
+  // A single lookup uses the exact same title+author matcher as the batch
+  // path above (isbn isn't used for matching — Hardcover's book-level rows
+  // aren't indexed by ISBN, editions are — so a caller that only has an isbn
+  // should resolve a title from it before calling this).
+  const { title, author } = req.query;
+  if (!title) {
+    res.status(400).json({ error: 'Missing title query param' });
     return;
   }
-  let query = '';
-  if (isbn) query = String(isbn);
-  else if (title) query = author ? `${title} ${author}` : String(title);
-  if (!query) {
-    res.status(400).json({ error: 'Missing isbn or title query param' });
-    return;
-  }
-
   try {
-    const gqlRes = await fetch(HARDCOVER_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.HARDCOVER_API_TOKEN}`,
-      },
-      body: JSON.stringify({ query: SEARCH_QUERY, variables: { q: query } }),
-    });
-    if (!gqlRes.ok) {
-      res.status(200).json({ rating: null, reason: `Hardcover API returned ${gqlRes.status}` });
-      return;
-    }
-    const gqlData = await gqlRes.json();
-    if (gqlData.errors) {
-      res.status(200).json({ rating: null, reason: gqlData.errors[0]?.message || 'Hardcover API error' });
-      return;
-    }
-    const doc = extractFirstHit(gqlData?.data?.search?.results);
-    if (!doc || !(Number(doc.rating) > 0)) {
-      res.status(200).json({ rating: null });
-      return;
-    }
-    res.status(200).json({
-      rating: doc.rating,
-      ratingsCount: doc.ratings_count || 0,
-      hardcoverUrl: doc.slug ? `https://hardcover.app/books/${doc.slug}` : null,
-    });
+    const [match] = await lookupBatch([{ title: String(title), author: String(author || '') }]);
+    res.status(200).json(match || { rating: null });
   } catch (e) {
     res.status(200).json({ rating: null, reason: e.message });
   }

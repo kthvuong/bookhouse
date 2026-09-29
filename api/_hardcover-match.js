@@ -77,6 +77,12 @@ function pickMatches(books, rows) {
       rating: Number(best.rating),
       ratingsCount: Number(best.ratings_count) || 0,
       hardcoverUrl: best.slug ? `https://hardcover.app/books/${best.slug}` : null,
+      // Hardcover's own synopsis — usually a single consistent, editorial
+      // description, unlike Open Library (often missing or a one-line stub)
+      // and Google Books (quality varies wildly by publisher feed). Only
+      // attached to a match that already passed the rating/author checks
+      // above, so this never widens which books get matched at all.
+      description: String(best.description || '').trim(),
     };
   });
 }

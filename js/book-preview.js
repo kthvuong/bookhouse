@@ -52,6 +52,14 @@ const BookPreviewFlow = (() => {
     if (token !== openToken || !rating) return;
     const mount = modal.querySelector('#bp-hardcover-mount');
     if (mount) mount.innerHTML = Reviews.ratingHTML(rating);
+    // Hardcover's synopsis is usually one consistent editorial description,
+    // unlike Open Library (often a one-line stub or missing) and Google
+    // Books (quality varies wildly by publisher feed) — prefer it over
+    // whichever provider's description is already showing, when it has one.
+    if (rating.description) {
+      const descEl = modal.querySelector('#bp-description-text');
+      if (descEl) descEl.textContent = rating.description;
+    }
   }
 
   function render(result, details, loading, owned) {
@@ -85,7 +93,7 @@ const BookPreviewFlow = (() => {
         ${genres.length ? `<div class="chip-row" style="margin-top:14px;">${genres.map((g) => `<span class="chip">${escapeHtml(g)}</span>`).join('')}</div>` : ''}
         <div style="margin-top:16px;">
           <div class="eyebrow">Synopsis</div>
-          <p class="description-text" style="margin-top:8px;">${loading ? 'Loading description…' : escapeHtml(details.description) || 'No description available.'}</p>
+          <p class="description-text" id="bp-description-text" style="margin-top:8px;">${loading ? 'Loading description…' : escapeHtml(details.description) || 'No description available.'}</p>
         </div>
       </div>
       <div class="modal-footer">

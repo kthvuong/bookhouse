@@ -387,8 +387,17 @@ const AddBookFlow = (() => {
       return Storage.ReadingEntries.create(entryPatch);
     }
 
-    let details = { description: '', genres: [] };
-    try { details = await BooksAPI.getDetails(result.externalId); } catch (e) {}
+    // Run in parallel — independent lookups, and this is a user-facing wait
+    // ("Add to Library"), not a background fetch.
+    const detailsPromise = BooksAPI.getDetails(result.externalId).catch(() => ({ description: '', genres: [] }));
+    const ratingPromise = typeof Reviews !== 'undefined' ? Reviews.fetchRating(result).catch(() => null) : Promise.resolve(null);
+    const [details, rating] = await Promise.all([detailsPromise, ratingPromise]);
+    // Hardcover's synopsis is usually one consistent editorial description,
+    // unlike Open Library (often a one-line stub or missing) and Google
+    // Books (quality varies wildly by publisher feed) — prefer it for the
+    // description that actually gets saved, when it has one. This is a
+    // one-time enrichment at add-time, not a live/synced value.
+    const hardcoverDescription = (rating && rating.description) || '';
 
     const book = await Storage.Books.create({
       source: 'openlibrary',
@@ -400,7 +409,7 @@ const AddBookFlow = (() => {
       isbn10: result.isbn10,
       isbn13: result.isbn13,
       pageCount: result.pageCount,
-      description: stripMarkdown(details.description),
+      description: hardcoverDescription || stripMarkdown(details.description),
       genres: details.genres,
       coverUrl: result.coverUrlLarge || result.coverUrl,
     });
