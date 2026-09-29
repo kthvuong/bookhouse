@@ -118,24 +118,30 @@
   font-size: clamp(30px, 4vw, 40px);
   position: relative;
   display: inline-block;
+  margin-bottom: 10px;
 }
 /* A hand-drawn squiggle under each page title, like underlining a heading
-   in a journal. It's a mask, so it takes the theme's accent color. */
+   in a journal. Drawn as solid ink with a thin paper-coloured edge around
+   the stroke, so the dot grid stops short of it and the line sits on top
+   of the page like a pen stroke rather than showing the dots through it.
+   (Plain SVG backgrounds, one per theme, rather than a mask: masks with
+   CSS variables have been unreliable in older Safari.) */
 .page-title::after {
   content: '';
   position: absolute;
-  left: 2px;
-  bottom: -9px;
-  width: min(100%, 170px);
-  height: 10px;
-  background: var(--accent);
-  opacity: 0.75;
-  -webkit-mask: var(--squiggle) left center / 26px 10px repeat-x;
-  mask: var(--squiggle) left center / 26px 10px repeat-x;
+  left: 0;
+  bottom: -11px;
+  width: min(100%, 182px);
+  height: 12px;
+  background: var(--squiggle) left center / 26px 12px;
+  background-repeat: round no-repeat;
   pointer-events: none;
 }
 :root {
-  --squiggle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='10' viewBox='0 0 26 10'%3E%3Cpath d='M1 5 Q 7 0.5 13 5 T 25 5' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E");
+  --squiggle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='12' viewBox='0 0 26 12'%3E%3Cpath d='M0 6 Q 6.5 1.5 13 6 T 26 6' fill='none' stroke='%23f6f1e7' stroke-width='6.5'/%3E%3Cpath d='M0 6 Q 6.5 1.5 13 6 T 26 6' fill='none' stroke='%23b1583a' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+[data-theme="dark"] {
+  --squiggle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='12' viewBox='0 0 26 12'%3E%3Cpath d='M0 6 Q 6.5 1.5 13 6 T 26 6' fill='none' stroke='%23211c17' stroke-width='6.5'/%3E%3Cpath d='M0 6 Q 6.5 1.5 13 6 T 26 6' fill='none' stroke='%23dd9163' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 
 .page-subtitle {
