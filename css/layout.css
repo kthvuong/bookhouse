@@ -24,7 +24,8 @@
   align-items: baseline;
   gap: var(--space-2);
   font-family: var(--font-serif);
-  font-size: 20px;
+  font-variation-settings: "SOFT" 100, "WONK" 1;
+  font-size: 21px;
   font-weight: 600;
   flex-shrink: 0;
   color: var(--text-primary);
@@ -114,7 +115,27 @@
 }
 
 .page-title {
-  font-size: clamp(28px, 4vw, 38px);
+  font-size: clamp(30px, 4vw, 40px);
+  position: relative;
+  display: inline-block;
+}
+/* A hand-drawn squiggle under each page title, like underlining a heading
+   in a journal. It's a mask, so it takes the theme's accent color. */
+.page-title::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  bottom: -9px;
+  width: min(100%, 170px);
+  height: 10px;
+  background: var(--accent);
+  opacity: 0.75;
+  -webkit-mask: var(--squiggle) left center / 26px 10px repeat-x;
+  mask: var(--squiggle) left center / 26px 10px repeat-x;
+  pointer-events: none;
+}
+:root {
+  --squiggle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='10' viewBox='0 0 26 10'%3E%3Cpath d='M1 5 Q 7 0.5 13 5 T 25 5' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 
 .page-subtitle {
@@ -137,7 +158,12 @@
 }
 
 .section-heading h2 {
-  font-size: 22px;
+  font-size: 23px;
+  /* A slightly slanted marker swipe behind the lower half of the words. */
+  padding: 0 6px;
+  margin-left: -6px;
+  border-radius: 6px;
+  background: linear-gradient(177deg, transparent 50%, var(--highlight) 50%, var(--highlight) 90%, transparent 90%);
 }
 
 .section-heading .see-all {
@@ -219,21 +245,32 @@ body::before {
   .rail { scrollbar-width: none; overscroll-behavior-x: contain; }
   .rail::-webkit-scrollbar { display: none; }
 
-  /* ---- Bottom tab bar: four destinations with Add in the middle ----
-     Each tab fills its full slot (a big, easy target), the active tab gets
-     a tinted pill behind its icon, and the bar pads itself above the
-     iPhone home indicator so taps don't land in the system gesture area. */
+  /* ---- Bottom tab bar: a floating rounded dock ----
+     Four destinations with Add in the middle. Each tab fills its full slot
+     (a big, easy target), the active tab gets a tinted pill behind its
+     icon, and the dock floats above the iPhone home indicator so taps
+     never land in the system gesture area. --dock-space is how much room
+     the dock takes at the bottom of the screen; everything that has to
+     clear it (page padding, save bar, toasts) uses it. */
+  :root {
+    --dock-gap: 10px;
+    --dock-space: calc(var(--mobile-tabbar-height) + var(--dock-gap) + env(safe-area-inset-bottom));
+  }
   .mobile-tab-bar {
     display: flex;
     align-items: stretch;
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
-    height: calc(var(--mobile-tabbar-height) + env(safe-area-inset-bottom));
-    padding: 0 max(6px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(6px, env(safe-area-inset-left));
-    background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+    position: fixed; z-index: 80;
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+    bottom: calc(var(--dock-gap) + env(safe-area-inset-bottom));
+    height: var(--mobile-tabbar-height);
+    padding: 0 6px;
+    border-radius: 28px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg-elevated) 90%, transparent);
     -webkit-backdrop-filter: saturate(1.4) blur(14px);
     backdrop-filter: saturate(1.4) blur(14px);
-    border-top: 1px solid var(--border);
-    box-shadow: 0 -6px 20px -14px hsl(var(--shadow-color) / 0.35);
+    box-shadow: 0 12px 30px -12px hsl(var(--shadow-color) / 0.45), 0 2px 6px -2px hsl(var(--shadow-color) / 0.12);
     transition: transform var(--dur-med) var(--ease-out);
   }
   .tab-item {
@@ -276,9 +313,9 @@ body::before {
 
   /* While typing, get the bar out of the way — Android lifts fixed bars
      above the keyboard, where it would cover the field being edited. */
-  body.keyboard-open .mobile-tab-bar { transform: translateY(110%); }
+  body.keyboard-open .mobile-tab-bar { transform: translateY(calc(100% + var(--dock-gap) + env(safe-area-inset-bottom) + 12px)); }
 
-  body { padding-bottom: calc(var(--mobile-tabbar-height) + env(safe-area-inset-bottom)); }
+  body { padding-bottom: calc(var(--dock-space) + 12px); }
 
   /* iOS Safari auto-zooms the page when focusing any text input/select
      smaller than 16px — this stops that (and the "cuts off the page"
@@ -313,7 +350,7 @@ body::before {
   .search-box.mobile-open .search-results-panel {
     left: 8px; right: 8px;
     max-height: calc(100vh - var(--header-height) - var(--mobile-tabbar-height) - 90px);
-    max-height: calc(100dvh - var(--header-height) - var(--mobile-tabbar-height) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 90px);
+    max-height: calc(100dvh - var(--header-height) - var(--dock-space) - env(safe-area-inset-top) - 90px);
   }
   .search-result-row { padding-top: 11px; padding-bottom: 11px; }
 }

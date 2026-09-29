@@ -37,6 +37,21 @@
     radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--gold-soft) 75%, transparent), transparent 62%),
     linear-gradient(160deg, color-mix(in srgb, var(--accent-tint) 90%, var(--bg-elevated)), var(--bg-elevated));
 }
+/* Taped into the journal. */
+.goal-card::before {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  top: -13px;
+  left: 50%;
+  width: 118px;
+  height: 28px;
+  margin-left: -59px;
+  transform: rotate(-3deg);
+  background: var(--tape-stripes), var(--tape-3);
+  clip-path: var(--tape-edge);
+  pointer-events: none;
+}
 /* Goal met: a warmer gold glow with a touch of sage. */
 .goal-card--done {
   border-color: color-mix(in srgb, var(--gold) 45%, var(--border));
@@ -77,18 +92,23 @@
   padding-bottom: 4px;
 }
 
+/* A handwritten sticker, stuck on a little crooked. */
 .goal-pace {
   display: inline-flex;
   align-items: center;
   gap: 7px;
   margin-top: 14px;
-  padding: 6px 13px 6px 11px;
+  padding: 3px 15px 4px 12px;
   border-radius: var(--radius-pill);
-  font-size: 13.5px;
-  font-weight: 600;
+  font-family: var(--font-hand);
+  font-size: 20px;
+  font-weight: 700;
   color: var(--text-primary);
   background: var(--pace-bg);
+  transform: rotate(-1.5deg);
+  box-shadow: 0 2px 0 hsl(var(--shadow-color) / 0.1);
 }
+.goal-pace span { font-size: 15px; }
 .goal-pace--ahead { --pace-bg: var(--sage-soft); }
 .goal-pace--on-track { --pace-bg: var(--gold-soft); }
 .goal-pace--behind { --pace-bg: var(--accent-soft); }
@@ -203,14 +223,15 @@
 .goal-custom { display: inline-block; margin-top: 14px; font-size: 13px; font-weight: 600; color: var(--accent); }
 
 /* ---------- Your year so far ---------- */
-.recap-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.recap-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px 16px; padding-top: 6px; }
 @media (max-width: 980px) {
   .recap-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+/* Scrapbook cards: each one taped down at its own angle, with a die-cut
+   emoji sticker in the corner. */
 .recap-tile {
   position: relative;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   min-height: 172px;
@@ -218,25 +239,44 @@
   border-radius: var(--radius-lg);
   background: var(--tile-bg);
   border: 1px solid color-mix(in srgb, var(--tile-ink) 18%, var(--border));
+  box-shadow: var(--shadow-sm);
 }
-.recap-tile--books { --tile-bg: color-mix(in srgb, var(--accent-tint) 85%, var(--bg-elevated)); --tile-ink: var(--accent); }
-.recap-tile--pages { --tile-bg: color-mix(in srgb, var(--gold-soft) 50%, var(--bg-elevated)); --tile-ink: var(--gold); }
-.recap-tile--rating { --tile-bg: color-mix(in srgb, var(--sage-soft) 65%, var(--bg-elevated)); --tile-ink: var(--sage); }
-.recap-tile--streak,
-.recap-tile--longest,
-.recap-tile--progress { --tile-bg: color-mix(in srgb, var(--accent-soft) 50%, var(--bg-elevated)); --tile-ink: var(--accent-strong); }
-
-.recap-watermark {
+.recap-tile::before {
+  content: '';
   position: absolute;
-  top: -10px;
-  right: -8px;
-  font-size: 78px;
-  line-height: 1;
-  opacity: 0.16;
-  transform: rotate(-12deg);
+  z-index: 2;
+  top: -11px;
+  left: 50%;
+  width: 72px;
+  height: 22px;
+  margin-left: -36px;
+  transform: rotate(var(--tape-tilt));
+  background: var(--tape-stripes), var(--tape-color);
+  clip-path: var(--tape-edge);
   pointer-events: none;
 }
-.recap-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.recap-tile--books { --tile-bg: color-mix(in srgb, var(--accent-tint) 85%, var(--bg-elevated)); --tile-ink: var(--accent); --tape-color: var(--tape-1); --tape-tilt: -4deg; }
+.recap-tile--pages { --tile-bg: color-mix(in srgb, var(--gold-soft) 50%, var(--bg-elevated)); --tile-ink: var(--gold); --tape-color: var(--tape-3); --tape-tilt: 3deg; }
+.recap-tile--rating { --tile-bg: color-mix(in srgb, var(--sage-soft) 65%, var(--bg-elevated)); --tile-ink: var(--sage); --tape-color: var(--tape-2); --tape-tilt: -2deg; }
+.recap-tile--streak,
+.recap-tile--longest,
+.recap-tile--progress { --tile-bg: color-mix(in srgb, var(--accent-soft) 50%, var(--bg-elevated)); --tile-ink: var(--accent-strong); --tape-color: var(--tape-1); --tape-tilt: 5deg; }
+
+/* The emoji as a die-cut sticker: a white outline built from drop shadows. */
+.recap-watermark {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 30px;
+  line-height: 1;
+  transform: rotate(10deg);
+  filter:
+    drop-shadow(1.5px 0 0 #fff) drop-shadow(-1.5px 0 0 #fff)
+    drop-shadow(0 1.5px 0 #fff) drop-shadow(0 -1.5px 0 #fff)
+    drop-shadow(0 2px 3px rgb(0 0 0 / 0.18));
+  pointer-events: none;
+}
+.recap-label { font-family: var(--font-hand); font-size: 21px; font-weight: 700; line-height: 1.1; color: var(--text-secondary); padding-right: 40px; }
 .recap-value {
   font-family: var(--font-serif);
   font-size: 46px;
@@ -256,8 +296,21 @@
   overflow: hidden;
 }
 
-/* Month by month */
-.recap-months { margin-top: 16px; padding: 18px 20px 14px; }
+/* Month by month — taped at one corner. */
+.recap-months { position: relative; margin-top: 22px; padding: 18px 20px 14px; box-shadow: var(--shadow-sm); }
+.recap-months::before {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  top: -6px;
+  left: -16px;
+  width: 74px;
+  height: 22px;
+  transform: rotate(-32deg);
+  background: var(--tape-stripes), var(--tape-2);
+  clip-path: var(--tape-edge);
+  pointer-events: none;
+}
 .recap-months-head {
   display: flex;
   align-items: baseline;
@@ -336,7 +389,8 @@
   .goal-num { font-size: 56px; }
   .recap-tile { min-height: 150px; padding: 16px; }
   .recap-value { font-size: 38px; }
-  .recap-watermark { font-size: 64px; }
+  .recap-watermark { font-size: 26px; top: 10px; right: 10px; }
+  .recap-label { font-size: 19px; padding-right: 34px; }
   .month-label { font-size: 10.5px; }
 }
 
