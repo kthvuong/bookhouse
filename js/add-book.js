@@ -397,7 +397,7 @@ const AddBookFlow = (() => {
     // Books (quality varies wildly by publisher feed) — prefer it for the
     // description that actually gets saved, when it has one. This is a
     // one-time enrichment at add-time, not a live/synced value.
-    const hardcoverDescription = (rating && rating.description) || '';
+    const hardcoverDescription = descriptionToText((rating && rating.description) || '');
 
     const book = await Storage.Books.create({
       source: 'openlibrary',
@@ -409,7 +409,7 @@ const AddBookFlow = (() => {
       isbn10: result.isbn10,
       isbn13: result.isbn13,
       pageCount: result.pageCount,
-      description: hardcoverDescription || stripMarkdown(details.description),
+      description: hardcoverDescription || descriptionToText(details.description),
       genres: details.genres,
       coverUrl: result.coverUrlLarge || result.coverUrl,
     });

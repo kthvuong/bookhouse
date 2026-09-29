@@ -92,7 +92,7 @@
     const cover = await coverMarkup(book);
     const bg = await coverGlowBackground(book);
     const genres = (book.genres || []).filter((g) => !g.includes(':')).slice(0, 2);
-    const blurb = book.description ? truncate(book.description.replace(/\s+/g, ' ').trim(), 92) : '';
+    const blurb = book.description ? truncate(descriptionToText(book.description).replace(/\s+/g, ' ').trim(), 92) : '';
     return `
       <div class="tbr-glow-card" data-book-id="${book.id}">
         <div class="tbr-glow-tile" style="background:${bg};">

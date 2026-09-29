@@ -125,12 +125,15 @@
   }
 
   function descriptionSectionHTML() {
-    if (!book.description) return '';
-    const long = book.description.length > 420;
+    // Cleaned at display time too, since books added before descriptions were
+    // cleaned on the way in still have Google's raw HTML saved.
+    const text = descriptionToText(book.description);
+    if (!text) return '';
+    const long = text.length > 420;
     return `
       <div class="book-section">
         <h2>Synopsis</h2>
-        <p class="description-text ${long ? 'clamped' : ''}" id="description-text">${escapeHtml(book.description)}</p>
+        <p class="description-text ${long ? 'clamped' : ''}" id="description-text">${escapeHtml(text)}</p>
         ${long ? `<button class="description-toggle" id="description-toggle">Read more</button>` : ''}
       </div>`;
   }

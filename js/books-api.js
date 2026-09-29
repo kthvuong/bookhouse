@@ -113,7 +113,7 @@ const BooksAPI = (() => {
         const genres = (data.subjects || [])
           .filter((s) => s.length < 40)
           .slice(0, 8);
-        return { description, genres };
+        return { description: descriptionToText(description), genres };
       } catch {
         return { description: '', genres: [] };
       }
@@ -186,7 +186,7 @@ const BooksAPI = (() => {
       coverUrlLarge: cover,
       pageCount: info.pageCount || null,
       editionCount: null,
-      description: stripMarkdown(info.description || ''),
+      description: descriptionToText(info.description || ''),
       genres: extractGoogleGenres(info.categories),
       averageRating: info.averageRating || null,
     };
@@ -231,7 +231,7 @@ const BooksAPI = (() => {
         if (!res.ok) return { description: '', genres: [] };
         const data = await res.json();
         const info = data.volumeInfo || {};
-        return { description: stripMarkdown(info.description || ''), genres: extractGoogleGenres(info.categories) };
+        return { description: descriptionToText(info.description || ''), genres: extractGoogleGenres(info.categories) };
       } catch {
         return { description: '', genres: [] };
       }

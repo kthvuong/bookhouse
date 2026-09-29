@@ -56,9 +56,10 @@ const BookPreviewFlow = (() => {
     // unlike Open Library (often a one-line stub or missing) and Google
     // Books (quality varies wildly by publisher feed) — prefer it over
     // whichever provider's description is already showing, when it has one.
-    if (rating.description) {
+    const hardcoverText = descriptionToText(rating.description);
+    if (hardcoverText) {
       const descEl = modal.querySelector('#bp-description-text');
-      if (descEl) descEl.textContent = rating.description;
+      if (descEl) descEl.textContent = hardcoverText;
     }
   }
 

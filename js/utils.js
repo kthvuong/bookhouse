@@ -246,6 +246,33 @@ function stripMarkdown(str) {
     .replace(/\[(.*?)\]\((.*?)\)/g, '$1');
 }
 
+/** Book descriptions arrive in mixed formats — Google Books sends HTML
+ *  (<br>, <b>, <p>, &quot;…), Open Library sometimes light markdown. This
+ *  normalizes any of them to plain text, keeping paragraph breaks as
+ *  newlines (shown by .description-text's white-space: pre-line). Running it
+ *  on already-clean text changes nothing, so it's applied both when a
+ *  description is fetched and when one saved before this existed is shown. */
+function descriptionToText(str) {
+  if (!str) return '';
+  let text = String(str);
+  if (/[<&]/.test(text)) {
+    const withBreaks = text
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/?(p|div|h[1-6]|blockquote|ul|ol)\b[^>]*>/gi, '\n\n')
+      .replace(/<li\b[^>]*>/gi, '\n• ');
+    // A DOMParser document is inert — no scripts run and nothing is fetched —
+    // so it's only used here to drop the remaining tags and decode entities.
+    const doc = new DOMParser().parseFromString(withBreaks, 'text/html');
+    doc.querySelectorAll('script, style').forEach((el) => el.remove());
+    text = doc.body.textContent || '';
+  }
+  return stripMarkdown(text)
+    .replace(/[ \t ]+\n/g, '\n')
+    .replace(/\n[ \t ]+/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function truncate(str, n) {
   if (!str) return '';
   return str.length > n ? str.slice(0, n - 1).trim() + '…' : str;

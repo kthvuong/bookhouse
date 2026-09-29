@@ -446,6 +446,11 @@
   padding: var(--space-4) var(--space-5) var(--space-5);
 }
 
+/* ---------- Book synopsis text ----------
+   Shared by the book page and the preview popup, which opens on every page.
+   pre-line keeps the paragraph breaks descriptionToText() leaves in. */
+.description-text { font-size: 14.5px; line-height: 1.7; color: var(--text-secondary); white-space: pre-line; }
+
 /* ---------- Finished-rating popup ---------- */
 .finished-popup { text-align: center; }
 .finished-popup-cover {
