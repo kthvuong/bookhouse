@@ -463,8 +463,10 @@ async function coverMarkup(book, className = '') {
 
 /** Samples a locally-cached cover blob's average color (small canvas read —
  *  safe with no CORS issues since the image comes from our own blob: URL,
- *  not a cross-origin request). Returns [r,g,b] or null if it can't. */
-function sampleImageColor(url) {
+ *  not a cross-origin request). Returns [r,g,b] or null if it can't.
+ *  `vibrant` weights each pixel by how colorful it is, so a gold-on-black
+ *  cover reads as gold rather than a muddy average of the two. */
+function sampleImageColor(url, { vibrant = false } = {}) {
   return new Promise((resolve) => {
     const img = new Image();
     // Needed for remote (not-yet-cached) covers so the canvas isn't
@@ -485,7 +487,10 @@ function sampleImageColor(url) {
         let r = 0, g = 0, b = 0, count = 0;
         for (let i = 0; i < data.length; i += 4) {
           if (data[i + 3] < 200) continue;
-          r += data[i]; g += data[i + 1]; b += data[i + 2]; count++;
+          const w = vibrant
+            ? 0.08 + (Math.max(data[i], data[i + 1], data[i + 2]) - Math.min(data[i], data[i + 1], data[i + 2])) / 255
+            : 1;
+          r += data[i] * w; g += data[i + 1] * w; b += data[i + 2] * w; count += w;
         }
         resolve(count ? [Math.round(r / count), Math.round(g / count), Math.round(b / count)] : null);
       } catch (e) {
@@ -511,9 +516,9 @@ function hashColor(str) {
   return HASH_PALETTE[hash % HASH_PALETTE.length];
 }
 
-/** A soft radial-glow CSS background for a book, tinted from its actual
- *  cover colors when we can sample one, otherwise a stable hashed color. */
-async function coverGlowBackground(book) {
+/** A book's representative [r,g,b]: sampled from its cover when we can,
+ *  otherwise a stable hashed color. Options pass through to sampleImageColor. */
+async function bookColor(book, opts) {
   let rgb = null;
   let sampleUrl = null;
   if (book && book.hasCachedCover) {
@@ -523,10 +528,15 @@ async function coverGlowBackground(book) {
   // blob yet — sample straight from the remote cover URL instead.
   if (!sampleUrl && book && book.coverUrl) sampleUrl = book.coverUrl;
   if (sampleUrl) {
-    try { rgb = await sampleImageColor(sampleUrl); } catch (e) {}
+    try { rgb = await sampleImageColor(sampleUrl, opts); } catch (e) {}
   }
-  if (!rgb) rgb = hashColor((book && (book.title || book.id || book.externalId)) || 'book');
-  const [r, g, b] = rgb;
+  return rgb || hashColor((book && (book.title || book.id || book.externalId)) || 'book');
+}
+
+/** A soft radial-glow CSS background for a book, tinted from its actual
+ *  cover colors when we can sample one, otherwise a stable hashed color. */
+async function coverGlowBackground(book) {
+  const [r, g, b] = await bookColor(book);
   return `radial-gradient(circle at 30% 25%, rgba(${r},${g},${b},0.38), rgba(${r},${g},${b},0.1) 75%)`;
 }
 

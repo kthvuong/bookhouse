@@ -4,7 +4,12 @@
 
 #home-greeting { margin-top: 4px; }
 
-.home-top-row { align-items: start; }
+/* Currently Reading rarely holds more than three books, so the goal card
+   gets an equal share of the row instead of the default 1.6 : 1 split. */
+.home-top-row { grid-template-columns: 1fr 1fr; align-items: start; }
+@media (max-width: 980px) {
+  .home-top-row { grid-template-columns: 1fr; }
+}
 
 .cr-card { width: 168px; }
 .cr-card .cover-wrap { aspect-ratio: 2/3; }
@@ -19,47 +24,318 @@
 
 .rail .book-card { width: 140px; }
 
-.goal-row {
-  display: flex;
-  align-items: center;
-  gap: 18px;
+/* ---------- Reading goal card ---------- */
+.goal-card {
+  position: relative;
+  border-radius: var(--radius-lg);
+  padding: 22px 24px 20px;
+  border: 1px solid color-mix(in srgb, var(--gold-soft) 65%, var(--border));
+  box-shadow: var(--shadow-sm);
+  background:
+    radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--gold-soft) 75%, transparent), transparent 62%),
+    linear-gradient(160deg, color-mix(in srgb, var(--accent-tint) 90%, var(--bg-elevated)), var(--bg-elevated));
 }
-.goal-row .goal-figure {
-  font-family: var(--font-serif);
-  font-size: 30px;
-  font-weight: 600;
+/* Goal met: a warmer gold glow with a touch of sage. */
+.goal-card--done {
+  border-color: color-mix(in srgb, var(--gold) 45%, var(--border));
+  background:
+    radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--gold-soft) 95%, transparent), transparent 65%),
+    radial-gradient(90% 70% at 0% 100%, color-mix(in srgb, var(--sage-soft) 70%, transparent), transparent 60%),
+    linear-gradient(160deg, color-mix(in srgb, var(--accent-tint) 90%, var(--bg-elevated)), var(--bg-elevated));
 }
-.goal-row .goal-figure small {
-  font-family: var(--font-sans);
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-muted);
-}
-.goal-empty a { color: var(--accent); font-weight: 600; }
 
-.mini-stats-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
+.goal-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.goal-edit { font-size: 13px; font-weight: 600; color: var(--accent); }
+.goal-edit:hover { color: var(--accent-strong); }
+
+.goal-headline {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
 }
-.mini-stat .figure {
+.goal-count { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 10px; }
+.goal-num {
+  font-family: var(--font-serif);
+  font-size: 68px;
+  font-weight: 600;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+}
+.goal-of { font-size: 16px; font-weight: 500; color: var(--text-secondary); }
+.goal-pct {
   font-family: var(--font-serif);
   font-size: 24px;
   font-weight: 600;
-}
-.mini-stat .caption {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 2px;
+  color: var(--text-secondary);
+  padding-bottom: 4px;
 }
 
-.streak-line {
+.goal-pace {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
+  padding: 6px 13px 6px 11px;
+  border-radius: var(--radius-pill);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--pace-bg);
+}
+.goal-pace--ahead { --pace-bg: var(--sage-soft); }
+.goal-pace--on-track { --pace-bg: var(--gold-soft); }
+.goal-pace--behind { --pace-bg: var(--accent-soft); }
+.goal-pace--done { --pace-bg: linear-gradient(90deg, var(--gold-soft), var(--accent-soft)); }
+
+.goal-foot { font-size: 13px; color: var(--text-secondary); }
+.goal-meter { margin: 20px 0 12px; height: 14px; }
+
+.goal-pages { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.goal-pages-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
   font-size: 13px;
   color: var(--text-secondary);
+  margin-bottom: 7px;
+}
+.goal-pages .progress-track { height: 8px; }
+
+/* ---------- The bookshelf ----------
+   One spine per book: finished books this year in their cover colors,
+   oldest first, then faint empty slots up to the goal. Rows wrap, and a
+   plank is painted under every row by the repeating background. */
+.goal-shelf {
+  --spine-w: 13px;
+  --row-h: 58px;
+  --plank: 6px;
+  --shelf-gap: 12px;
+  --plank-color: color-mix(in srgb, var(--gold) 55%, var(--accent-strong));
+  display: grid;
+  /* auto-fill keeps empty tracks, so spines stretch just enough to spread a
+     full row edge to edge without ballooning when the goal is small. */
+  grid-template-columns: repeat(auto-fill, minmax(var(--spine-w), 1fr));
+  grid-auto-rows: var(--row-h);
+  column-gap: 3px;
+  row-gap: calc(var(--plank) + var(--shelf-gap));
+  align-items: end;
+  padding-bottom: var(--plank);
+  margin: 20px 0 12px;
+  background: repeating-linear-gradient(to bottom,
+    transparent 0,
+    transparent var(--row-h),
+    var(--plank-color) var(--row-h),
+    var(--plank-color) calc(var(--row-h) + var(--plank)),
+    transparent calc(var(--row-h) + var(--plank)),
+    transparent calc(var(--row-h) + var(--plank) + var(--shelf-gap)));
+}
+.goal-shelf--xl { --spine-w: 26px; --row-h: 64px; }
+.goal-shelf--md { --spine-w: 10px; --row-h: 48px; }
+.goal-shelf--sm { --spine-w: 7px; --row-h: 40px; --plank: 5px; }
+
+.spine {
+  display: block;
+  height: var(--h);
+  border-radius: 2px 2px 1px 1px;
+  background:
+    linear-gradient(to bottom, transparent 13%, rgb(255 255 255 / 0.32) 13%, rgb(255 255 255 / 0.32) calc(13% + 2px), transparent calc(13% + 2px)),
+    linear-gradient(to top, transparent 11%, rgb(0 0 0 / 0.2) 11%, rgb(0 0 0 / 0.2) calc(11% + 2px), transparent calc(11% + 2px)),
+    linear-gradient(90deg, rgb(255 255 255 / 0.22), transparent 35%, transparent 65%, rgb(0 0 0 / 0.16)),
+    var(--spine, var(--accent));
+  animation: spine-in 380ms var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i), 45) * 16ms);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.spine[data-book-id] { cursor: pointer; }
+.spine[data-book-id]:hover { transform: translateY(-5px); }
+.spine--empty { background: color-mix(in srgb, var(--text-primary) 9%, transparent); }
+.spine--bonus { box-shadow: 0 0 0 1.5px var(--gold), 0 0 10px color-mix(in srgb, var(--gold) 55%, transparent); }
+@keyframes spine-in { from { opacity: 0; transform: translateY(10px); } }
+
+.spine-tip {
+  position: absolute;
+  z-index: 5;
+  max-width: 240px;
+  padding: 8px 11px;
+  border-radius: var(--radius-sm);
+  background: var(--text-primary);
+  color: var(--bg);
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.spine-tip strong { display: block; font-size: 13px; }
+.spine-tip span { opacity: 0.8; }
+
+/* No goal yet: quick picks instead of a bare "set one" link. */
+.goal-empty-title {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.15;
+  margin-top: 14px;
+}
+.goal-empty-text { font-size: 14px; color: var(--text-secondary); margin-top: 6px; }
+.goal-quick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+.goal-quick-btn {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 2px;
+  padding: 14px 8px 12px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color var(--dur-fast), background var(--dur-fast), transform var(--dur-fast) var(--ease-out);
+}
+.goal-quick-btn strong { font-family: var(--font-serif); font-size: 28px; font-weight: 600; line-height: 1.1; }
+.goal-quick-btn span { font-size: 12px; color: var(--text-muted); }
+.goal-quick-btn:hover { border-color: var(--accent); background: var(--accent-tint); transform: translateY(-2px); }
+.goal-custom { display: inline-block; margin-top: 14px; font-size: 13px; font-weight: 600; color: var(--accent); }
+
+/* ---------- Your year so far ---------- */
+.recap-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 980px) {
+  .recap-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.recap-tile {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 172px;
+  padding: 18px 20px;
+  border-radius: var(--radius-lg);
+  background: var(--tile-bg);
+  border: 1px solid color-mix(in srgb, var(--tile-ink) 18%, var(--border));
+}
+.recap-tile--books { --tile-bg: color-mix(in srgb, var(--accent-tint) 85%, var(--bg-elevated)); --tile-ink: var(--accent); }
+.recap-tile--pages { --tile-bg: color-mix(in srgb, var(--gold-soft) 50%, var(--bg-elevated)); --tile-ink: var(--gold); }
+.recap-tile--rating { --tile-bg: color-mix(in srgb, var(--sage-soft) 65%, var(--bg-elevated)); --tile-ink: var(--sage); }
+.recap-tile--streak,
+.recap-tile--longest,
+.recap-tile--progress { --tile-bg: color-mix(in srgb, var(--accent-soft) 50%, var(--bg-elevated)); --tile-ink: var(--accent-strong); }
+
+.recap-watermark {
+  position: absolute;
+  top: -10px;
+  right: -8px;
+  font-size: 78px;
+  line-height: 1;
+  opacity: 0.16;
+  transform: rotate(-12deg);
+  pointer-events: none;
+}
+.recap-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.recap-value {
+  font-family: var(--font-serif);
+  font-size: 46px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  margin-top: auto;
+  padding-top: 18px;
+}
+.recap-note {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Month by month */
+.recap-months { margin-top: 16px; padding: 18px 20px 14px; }
+.recap-months-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 8px;
+}
+.recap-months-best { font-size: 13px; color: var(--text-secondary); }
+.recap-months-empty { font-size: 13.5px; color: var(--text-muted); }
+
+.month-strip {
+  --plot-h: 96px;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+.month-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+.month-col:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+.month-plot {
+  position: relative;
+  width: 100%;
+  height: var(--plot-h);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  border-bottom: 1px solid var(--border-strong);
+}
+.month-bar {
+  width: min(24px, 62%);
+  height: max(4px, calc(var(--v) * (var(--plot-h) - 22px)));
+  border-radius: 4px 4px 0 0;
+  background: color-mix(in srgb, var(--accent) 80%, var(--bg-elevated));
+  transform-origin: bottom;
+  animation: bar-grow 600ms var(--ease-out) backwards;
+  transition: filter var(--dur-fast);
+}
+.month-col.is-current .month-bar { background: var(--accent-strong); }
+.month-col:hover .month-bar,
+.month-col:focus-visible .month-bar { filter: brightness(1.08) saturate(1.1); }
+.month-val { font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px; }
+.month-label { font-size: 11.5px; color: var(--text-muted); margin-top: 6px; }
+.month-col.is-current .month-label { color: var(--text-primary); font-weight: 700; }
+.month-col.is-future .month-label { opacity: 0.45; }
+
+.month-tip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(max(4px, var(--v) * (var(--plot-h) - 22px)) + 8px);
+  transform: translateX(-50%);
+  padding: 4px 9px;
+  border-radius: var(--radius-sm);
+  background: var(--text-primary);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-fast);
+  z-index: 2;
+}
+.month-col:hover .month-tip,
+.month-col:focus-visible .month-tip { opacity: 1; }
+/* The value label already says it for the labelled months. */
+.month-col:hover .month-val,
+.month-col:focus-visible .month-val { visibility: hidden; }
+
+@media (max-width: 560px) {
+  .goal-num { font-size: 56px; }
+  .recap-tile { min-height: 150px; padding: 16px; }
+  .recap-value { font-size: 38px; }
+  .recap-watermark { font-size: 64px; }
+  .month-label { font-size: 10.5px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spine, .month-bar { animation: none; }
+  .spine, .goal-quick-btn { transition: none; }
 }

@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Home</title>
-<script src="js/config.js?v=39"></script>
-<script src="js/theme-init.js?v=39"></script>
-<script src="js/auth-init.js?v=39"></script>
-<link rel="stylesheet" href="css/base.css?v=39">
-<link rel="stylesheet" href="css/layout.css?v=39">
-<link rel="stylesheet" href="css/components.css?v=39">
-<link rel="stylesheet" href="css/charts.css?v=39">
-<link rel="stylesheet" href="css/home.css?v=39">
+<script src="js/config.js?v=41"></script>
+<script src="js/theme-init.js?v=41"></script>
+<script src="js/auth-init.js?v=41"></script>
+<link rel="stylesheet" href="css/base.css?v=41">
+<link rel="stylesheet" href="css/layout.css?v=41">
+<link rel="stylesheet" href="css/components.css?v=41">
+<link rel="stylesheet" href="css/charts.css?v=41">
+<link rel="stylesheet" href="css/home.css?v=41">
 </head>
 <body>
-<script src="js/auth-gate.js?v=39"></script>
+<script src="js/auth-gate.js?v=41"></script>
 <div id="header-root"></div>
 
 <main class="page-shell">
@@ -34,49 +34,45 @@
       <div id="currently-reading-rail" class="rail"></div>
     </section>
 
-    <section class="section panel" id="goal-panel">
-      <div class="eyebrow">Reading Goal</div>
-      <div id="goal-content" style="margin-top:14px;"></div>
+    <section class="section goal-card" id="goal-panel">
+      <div class="goal-card-head"><div class="eyebrow">Reading Goal</div></div>
     </section>
   </div>
 
-  <div class="two-col">
-    <div>
-      <section class="section" id="section-this-month">
-        <div class="section-heading">
-          <h2 id="this-month-heading">This Month</h2>
-          <a class="see-all" id="this-month-see-all" href="history.html">See all →</a>
-        </div>
-        <div id="this-month-rail" class="rail"></div>
-      </section>
-
-      <section class="section" id="section-up-next">
-        <div class="section-heading">
-          <h2>Up Next</h2>
-          <a class="see-all" href="want-to-read.html">See all →</a>
-        </div>
-        <div id="up-next-rail" class="rail"></div>
-      </section>
+  <section class="section recap" id="recap-section">
+    <div class="section-heading">
+      <h2 id="recap-heading">This Year So Far</h2>
+      <a class="see-all" href="stats.html">All stats →</a>
     </div>
+    <div id="recap-content"></div>
+  </section>
 
-    <div>
-      <section class="section panel" id="stats-panel">
-        <div class="eyebrow">This Year So Far</div>
-        <div id="mini-stats" class="kv-list" style="margin-top:14px;"></div>
-      </section>
+  <section class="section" id="section-this-month">
+    <div class="section-heading">
+      <h2 id="this-month-heading">This Month</h2>
+      <a class="see-all" id="this-month-see-all" href="history.html">See all →</a>
     </div>
-  </div>
+    <div id="this-month-rail" class="rail"></div>
+  </section>
+
+  <section class="section" id="section-up-next">
+    <div class="section-heading">
+      <h2>Up Next</h2>
+      <a class="see-all" href="want-to-read.html">See all →</a>
+    </div>
+    <div id="up-next-rail" class="rail"></div>
+  </section>
 </main>
 
-<script src="js/storage.js?v=39"></script>
-<script src="js/sync.js?v=39"></script>
-<script src="js/reviews.js?v=39"></script>
-<script src="js/books-api.js?v=39"></script>
-<script src="js/utils.js?v=39"></script>
-<script src="js/charts.js?v=39"></script>
-<script src="js/nav.js?v=39"></script>
-<script src="js/add-book.js?v=39"></script>
-<script src="js/book-preview.js?v=39"></script>
-<script src="js/home.js?v=39"></script>
+<script src="js/storage.js?v=41"></script>
+<script src="js/sync.js?v=41"></script>
+<script src="js/reviews.js?v=41"></script>
+<script src="js/books-api.js?v=41"></script>
+<script src="js/utils.js?v=41"></script>
+<script src="js/charts.js?v=41"></script>
+<script src="js/nav.js?v=41"></script>
+<script src="js/add-book.js?v=41"></script>
+<script src="js/book-preview.js?v=41"></script>
+<script src="js/home.js?v=41"></script>
 </body>
 </html>
