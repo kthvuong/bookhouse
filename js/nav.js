@@ -244,7 +244,7 @@ function initGlobalSearch() {
 
     let externalResults = [];
     try {
-      externalResults = await BooksAPI.search(query, { limit: 8 });
+      externalResults = await BooksAPI.search(query, { limit: 8, includeHardcover: true });
     } catch (e) {
       externalResults = [];
     }
@@ -254,7 +254,7 @@ function initGlobalSearch() {
     const newResults = externalResults.filter((r) => !isOwned(r)).slice(0, 6);
 
     let html = renderSearchGroup('In your library', personalMatches.map(personalRowHTML));
-    html += renderSearchGroup('From Open Library', newResults.map(externalRowHTML));
+    html += renderSearchGroup('New to you', newResults.map(externalRowHTML));
     if (!personalMatches.length && !newResults.length) {
       html = `<div class="search-empty">No matches for "${escapeHtml(query)}"</div>`;
     } else if (newResults.length) {

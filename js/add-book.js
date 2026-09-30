@@ -85,7 +85,7 @@ const AddBookFlow = (() => {
       results.innerHTML = `<div class="empty-state" style="padding:24px;"><p>Searching Open Library…</p></div>`;
       let list = [];
       try {
-        list = await BooksAPI.search(q, { limit: 16 });
+        list = await BooksAPI.search(q, { limit: 16, includeHardcover: true });
       } catch (e) {
         results.innerHTML = `<div class="empty-state" style="padding:24px;"><p>Couldn't reach Open Library. Check your connection and try again.</p></div>`;
         return;
@@ -400,7 +400,7 @@ const AddBookFlow = (() => {
     const hardcoverDescription = descriptionToText((rating && rating.description) || '');
 
     const book = await Storage.Books.create({
-      source: 'openlibrary',
+      source: result.source || 'openlibrary',
       externalId: result.externalId,
       title: result.title,
       subtitle: result.subtitle,

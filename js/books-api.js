@@ -1,8 +1,11 @@
 /* ============================================================
-   books-api.js — external book metadata provider.
+   books-api.js — external book metadata providers.
 
-   Exposes a small provider interface so Open Library could be
-   swapped for another API later without touching any UI code:
+   Search merges Hardcover (via api/search.js) with Google Books,
+   falling back to Open Library when Google's quota runs dry; Explore's
+   rails and trending come from Google / Open Library. Each provider
+   exposes the same small interface, so no UI code has to care which
+   one a result came from:
 
      provider.search(query)      -> [{ externalId, title, authors, ... }]
      provider.getDetails(id)     -> { description, genres }
@@ -251,6 +254,66 @@ const BooksAPI = (() => {
     },
   };
 
+  /* ---- Hardcover (search only), through our own api/search.js ----
+     Hardcover's catalog is modern and community-curated: strong on new
+     and popular books, with a consistent synopsis and genres on every
+     result. Its API can't be called from a browser (the token would be
+     exposed), so this goes through the same sync-token-gated backend as
+     ratings; on a device without a sync token it's simply skipped. */
+  const hardcoverDetails = new Map(); // externalId -> { description, genres }
+  const hardcoverSearchCache = new Map();
+
+  function mapHardcoverResult(r) {
+    const externalId = `hc:${r.id}`;
+    const description = descriptionToText(r.description || '');
+    const genres = r.genres || [];
+    hardcoverDetails.set(externalId, { description, genres });
+    // Hardcover's own cover when it has one, else Open Library's by ISBN
+    // (default=false makes a missing cover a clean 404, not a blank image).
+    const isbn = r.isbn13 || r.isbn10;
+    const cover = r.cover || (isbn ? `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?default=false` : '');
+    return {
+      externalId,
+      source: 'hardcover',
+      title: r.title,
+      subtitle: r.subtitle || '',
+      authors: r.authors || [],
+      firstPublishYear: r.year || null,
+      isbn10: r.isbn10 || '',
+      isbn13: r.isbn13 || '',
+      coverUrl: cover,
+      coverUrlLarge: cover,
+      pageCount: r.pages || null,
+      editionCount: null,
+      description,
+      genres,
+      averageRating: r.rating || null,
+    };
+  }
+
+  async function searchHardcover(query, limit) {
+    if (typeof Sync === 'undefined' || !Sync.isConfigured()) return [];
+    const key = `${query.trim().toLowerCase()}|${limit}`;
+    if (hardcoverSearchCache.has(key)) return hardcoverSearchCache.get(key);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 4000);
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}&limit=${limit}`, {
+        headers: { Authorization: `Bearer ${Sync.token()}` },
+        signal: ctrl.signal,
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      const results = (data.results || []).map(mapHardcoverResult);
+      hardcoverSearchCache.set(key, results);
+      return results;
+    } catch (e) {
+      return []; // slow or unreachable: fall back to the other catalogs alone
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   let activeProvider = GoogleBooksProvider;
 
   // Google's key-less quota is a small pool shared by every unauthenticated
@@ -267,15 +330,41 @@ const BooksAPI = (() => {
     }
   }
 
+  /** Hardcover first (its catalog data is the most consistent), then any
+   *  Google Books / Open Library results for books Hardcover doesn't have.
+   *  Both searches run at once, so this is no slower than either alone. */
+  async function searchWithHardcover(query, opts = {}) {
+    const limit = opts.limit || 20;
+    const [hardcover, others] = await Promise.all([
+      searchHardcover(query, Math.min(limit, 25)),
+      withFallback('search', [query, opts]).catch(() => []),
+    ]);
+    if (!hardcover.length) return others;
+    const alreadyListed = buildOwnedMatcher(hardcover); // same ISBN / title+author matching as "already owned"
+    return [...hardcover, ...others.filter((r) => !alreadyListed(r))].slice(0, limit);
+  }
+
   return {
     setProvider(provider) {
       activeProvider = provider;
     },
     providerName: () => activeProvider.name,
-    search: (query, opts) => withFallback('search', [query, opts]),
+    /** opts.includeHardcover merges in Hardcover's catalog (the search bar
+     *  and Add Book use it; Explore's background lookups don't, to stay
+     *  well inside Hardcover's rate limit). */
+    search: (query, opts) => (opts && opts.includeHardcover
+      ? searchWithHardcover(query, opts)
+      : withFallback('search', [query, opts])),
     searchBySubject: (subject, opts) => withFallback('searchBySubject', [subject, opts]),
     trending: (opts) => withFallback('trending', [opts]),
-    getDetails: (externalId) => activeProvider.getDetails(externalId),
+    /** Routed by where the result came from, so a result from the Open
+     *  Library fallback (or Hardcover) doesn't get looked up in Google. */
+    getDetails: (externalId) => {
+      const id = String(externalId || '');
+      if (id.startsWith('hc:')) return Promise.resolve(hardcoverDetails.get(id) || { description: '', genres: [] });
+      if (id.startsWith('/works/')) return OpenLibraryProvider.getDetails(id);
+      return GoogleBooksProvider.getDetails(id);
+    },
     fetchCoverBlob: (url) => activeProvider.fetchCoverBlob(url),
   };
 })();
