@@ -83,8 +83,8 @@
   const googleKeyHint = document.getElementById('google-key-hint');
   function refreshGoogleKeyHint() {
     googleKeyHint.textContent = localStorage.getItem('mg_google_books_key')
-      ? 'Using your personal API key for book search.'
-      : 'No key set — using the shared free quota (may occasionally hit limits).';
+      ? 'Using your Google Books key on this device.'
+      : 'No key on this device — Google Books is skipped and Open Library is used instead.';
   }
   googleKeyInput.value = localStorage.getItem('mg_google_books_key') || '';
   refreshGoogleKeyHint();

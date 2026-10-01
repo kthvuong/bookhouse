@@ -280,7 +280,9 @@ function initGlobalSearch() {
     if (!panel.contains(e.target) && e.target !== input) panel.hidden = true;
     const searchBox = document.getElementById('search-box');
     const toggleBtn = document.getElementById('search-toggle-btn');
-    if (searchBox && searchBox.classList.contains('mobile-open') && !searchBox.contains(e.target) && e.target !== toggleBtn) {
+    // contains(), not ===: a tap on the magnifier lands on the <svg> inside
+    // the button, and would otherwise close the box the same tap just opened.
+    if (searchBox && searchBox.classList.contains('mobile-open') && !searchBox.contains(e.target) && !(toggleBtn && toggleBtn.contains(e.target))) {
       closeMobileSearch();
     }
   });

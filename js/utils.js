@@ -614,8 +614,11 @@ function buildOwnedMatcher(books) {
     [b.isbn13, b.isbn10].filter(Boolean).forEach((i) => byIsbn.set(String(i).replace(/-/g, ''), b));
     const last = matchLast((b.authors || [])[0]);
     if (!last) return;
-    byFullTitle.set(`${matchNorm(b.title)}|${last}`, b);
-    matchTitleVariants(b.title).forEach((v) => byAnyVariant.set(`${matchNorm(v)}|${last}`, b));
+    // First one wins, so in a ranked list (search results) the best-ranked
+    // book keeps a key that a later one shares.
+    const keep = (map, key) => { if (!map.has(key)) map.set(key, b); };
+    keep(byFullTitle, `${matchNorm(b.title)}|${last}`);
+    matchTitleVariants(b.title).forEach((v) => keep(byAnyVariant, `${matchNorm(v)}|${last}`));
   });
 
   return (r) => {
@@ -627,6 +630,10 @@ function buildOwnedMatcher(books) {
     }
     const last = matchLast((r.authors || [])[0]);
     if (!last) return null;
+    // The same full title beats a shared half: "Fourth Wing" is "Fourth
+    // Wing", not "Fourth Wing: The Official Coloring Book".
+    const exact = byFullTitle.get(`${matchNorm(r.title)}|${last}`);
+    if (exact) return exact;
     // Only one side is ever expanded into variants: expanding both would let
     // "Mistborn: The Final Empire" match "Mistborn: The Hero of Ages" via the
     // shared "Mistborn" half.

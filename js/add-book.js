@@ -82,12 +82,12 @@ const AddBookFlow = (() => {
     const run = debounce(async (q) => {
       lastQuery = q;
       if (!q || q.trim().length < 2) { results.innerHTML = ''; lastResults = []; return; }
-      results.innerHTML = `<div class="empty-state" style="padding:24px;"><p>Searching Open Library…</p></div>`;
+      results.innerHTML = `<div class="empty-state" style="padding:24px;"><p>Searching…</p></div>`;
       let list = [];
       try {
         list = await BooksAPI.search(q, { limit: 16, includeHardcover: true });
       } catch (e) {
-        results.innerHTML = `<div class="empty-state" style="padding:24px;"><p>Couldn't reach Open Library. Check your connection and try again.</p></div>`;
+        results.innerHTML = `<div class="empty-state" style="padding:24px;"><p>Couldn't reach the book catalogs. Check your connection and try again.</p></div>`;
         return;
       }
       lastResults = list;
@@ -141,8 +141,10 @@ const AddBookFlow = (() => {
     let selectedStatus = 'want_to_read';
     let pendingRating = 0;
 
-    const cover = result.coverUrl
-      ? `<img src="${escapeHtml(result.coverUrl)}" alt="">`
+    // coverUrl is the small list thumbnail; past the list, use the full cover.
+    const coverSrc = result.coverUrlLarge || result.coverUrl;
+    const cover = coverSrc
+      ? `<img src="${escapeHtml(coverSrc)}" alt="">`
       : coverFallbackHTML(result.title);
     const metaLine = [result.firstPublishYear, result.pageCount ? result.pageCount + ' pages' : null].filter(Boolean).join(' · ');
 
@@ -262,7 +264,8 @@ const AddBookFlow = (() => {
   }
 
   function renderSuccessStep(result, status, entry) {
-    const cover = result.coverUrl ? `<img src="${escapeHtml(result.coverUrl)}" alt="">` : coverFallbackHTML(result.title);
+    const coverSrc = result.coverUrlLarge || result.coverUrl;
+    const cover = coverSrc ? `<img src="${escapeHtml(coverSrc)}" alt="">` : coverFallbackHTML(result.title);
     const labels = { want_to_read: 'Want to Read', currently_reading: 'Currently Reading', finished: 'Finished' };
     modal.querySelector('.modal-scroll-body').innerHTML = `
       <div class="finished-popup fade-in" style="padding:10px 0;">
