@@ -356,10 +356,13 @@ const BooksAPI = (() => {
        1. Hardcover's well-known books that match the words typed;
        2. the other catalog's results and Hardcover's remaining matches,
           taking turns so neither can crowd the other out of a short list;
-       3. Hardcover's box sets, and records no reader has saved (bulk-
-          imported stubs).
+       3. Hardcover's box sets, if (1) found anything, and its records
+          no reader has saved (bulk-imported stubs).
      A book both catalogs return is listed once, with Hardcover's details. */
-  const WELL_KNOWN_RATINGS = 25;  // on Hardcover; a stray record has 0–4
+  // "Well-known" is set from live searches: books that match a half-typed
+  // query only by coincidence ("fourth wi" → Henry IV, "the hou" → The
+  // Hourglass Throne) topped out at 57 ratings and 221 readers.
+  const WELL_KNOWN_RATINGS = 100; // on Hardcover
   const WELL_KNOWN_READERS = 300; // …or saved by this many, for books too new to have ratings
   const NEAR_THE_TOP = 0.05;      // and within 1/20th of the best match, so "The Housemaid" isn't followed by every namesake
 
@@ -391,9 +394,16 @@ const BooksAPI = (() => {
       return true;
     };
 
+    // A box set is clutter beside the books it collects, but with nothing
+    // well-known above it, it may be exactly what was searched for.
+    const boxSetsLast = merged.length > 0;
     const lanes = [
       { rows: others, add: addOther, next: 0 },
-      { rows: matching.filter((r) => !r.isCompilation && (r.readers > 0 || r.ratingsCount > 0)), add: addHardcover, next: 0 },
+      {
+        rows: matching.filter((r) => (r.readers > 0 || r.ratingsCount > 0) && !(boxSetsLast && r.isCompilation)),
+        add: addHardcover,
+        next: 0,
+      },
     ];
     const takeTurn = (lane) => {
       while (lane.next < lane.rows.length) {
