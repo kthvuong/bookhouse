@@ -315,7 +315,8 @@ const BooksAPI = (() => {
      image hosts don't, so those covers come through our own api/cover.js
      (the same sync-token-gated backend as search), which keeps the matching
      list of hosts it will fetch from. */
-  const COVER_HOSTS_VIA_API = ['assets.hardcover.app', 'production-img.hardcover.app', 'books.google.com', 'books.googleusercontent.com'];
+  const GOOGLE_COVER_HOSTS = ['books.google.com', 'books.googleusercontent.com'];
+  const COVER_HOSTS_VIA_API = ['assets.hardcover.app', 'production-img.hardcover.app', ...GOOGLE_COVER_HOSTS];
   const COVER_TIMEOUT_MS = 20000; // Open Library's covers come from archive.org, which can take its time
 
   function coverGoesViaApi(coverUrl) {
@@ -344,6 +345,23 @@ const BooksAPI = (() => {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  /* A Google Books cover address names a thumbnail about 128 pixels wide.
+     Asking for a bigger one with zoom= isn't dependable (for most current
+     books it answers with a grey "no image" card), but the same address
+     with fife= added usually returns the same picture at up to the size
+     asked for. Usually: for some books the bigger "cover" is the title
+     page. js/sharper-covers.js checks before it believes it. */
+  const SHARPER_COVER_FIT = 'w480-h720'; // twice the book page's 240px frame, for a high-density screen
+
+  /** The address of a bigger copy of the picture at `coverUrl`, or '' if
+   *  there's no such thing to ask for. */
+  function sharperCoverUrl(coverUrl) {
+    let url;
+    try { url = new URL(coverUrl); } catch (e) { return ''; }
+    if (!GOOGLE_COVER_HOSTS.includes(url.hostname) || url.searchParams.has('fife')) return '';
+    return `${coverUrl}${url.search ? '&' : '?'}fife=${SHARPER_COVER_FIT}`;
   }
 
   let activeProvider = GoogleBooksProvider;
@@ -465,5 +483,6 @@ const BooksAPI = (() => {
       return GoogleBooksProvider.getDetails(id);
     },
     fetchCoverBlob,
+    sharperCoverUrl,
   };
 })();

@@ -299,6 +299,10 @@ const Storage = (() => {
   const Covers = {
     save: (bookId, blob, remoteUrl) => put('covers', { bookId, blob, remoteUrl: remoteUrl || '' }),
     get: (bookId) => get('covers', bookId),
+    // For a note kept beside the picture (js/sharper-covers.js). save()
+    // starts the record afresh, so a new picture drops the old note.
+    update: (bookId, patch) =>
+      get('covers', bookId).then((c) => (c ? put('covers', { ...c, ...patch }) : null)),
     async getObjectUrl(bookId) {
       const rec = await get('covers', bookId);
       if (!rec || !rec.blob) return null;

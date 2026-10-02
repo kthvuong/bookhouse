@@ -454,11 +454,11 @@ async function coverMarkup(book, className = '') {
   // This device's own copy when it has one (see cacheCover below), otherwise
   // the cover's address on the catalog it came from.
   const url = book.id ? await Storage.Covers.getObjectUrl(book.id).catch(() => null) : null;
-  if (url) return `<img class="${className}" src="${url}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">${coverFallbackHiddenHTML(book.title)}`;
-  if (book.coverUrl) {
-    return `<img class="${className}" src="${escapeHtml(book.coverUrl)}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">${coverFallbackHiddenHTML(book.title)}`;
-  }
-  return coverFallbackHTML(book.title);
+  const src = url || escapeHtml(book.coverUrl);
+  if (!src) return coverFallbackHTML(book.title);
+  // data-cover-of lets a sharper copy be put in its place once one has been
+  // fetched (js/sharper-covers.js).
+  return `<img class="${className}" src="${src}" alt="" loading="lazy" data-cover-of="${escapeHtml(book.id)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">${coverFallbackHiddenHTML(book.title)}`;
 }
 
 /* ---- keeping a copy of each cover on this device ----
@@ -513,6 +513,9 @@ function cacheCover(book) {
       return kept;
     })().catch(() => false).finally(() => coverFetches.delete(book.id));
     coverFetches.set(book.id, fetching);
+    // Not waited for: if the catalog has a sharper copy of a small cover,
+    // it's swapped in on screen when it arrives.
+    fetching.then(() => { if (typeof SharperCovers !== 'undefined') SharperCovers.lookFor(book); });
   }
   return coverFetches.get(book.id);
 }
