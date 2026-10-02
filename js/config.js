@@ -14,15 +14,25 @@ const USER_NAME = 'Kathy';
     document.title = `${APP_NAME} — ${document.title}`;
   }
 
-  // Same cottage-with-a-window mark as the header brand, baked as a
-  // favicon so the browser tab matches. Colors are hardcoded (not the
-  // theme's CSS vars) since a favicon renders as its own tiny document.
+  // Same cottage-with-a-window mark as the header brand (js/nav.js), baked
+  // as a favicon so the browser tab and bookmarks match. It has no backing
+  // tile: on a tab or bookmarks bar that showed as a pale square behind
+  // the house. Colors are hardcoded (not the theme's CSS vars) since a
+  // favicon renders as its own tiny document; the roof and window lighten
+  // when the browser is in dark mode, so they hold up on a dark tab bar.
   const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-    <rect width="32" height="32" rx="7" fill="#f6f1e7"/>
-    <path d="M5 17 L16 6.5 L27 17" fill="none" stroke="#b1583a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-    <rect x="8" y="16" width="16" height="11.5" rx="3" fill="#ecd3bf"/>
-    <rect x="13.3" y="20.8" width="5.4" height="6.7" rx="1.6" fill="#b1583a"/>
-    <circle cx="16" cy="12" r="1.9" fill="#c08a2e"/>
+    <style>
+      .roof { fill: none; stroke: #b1583a; }
+      .lamp { fill: #c08a2e; }
+      @media (prefers-color-scheme: dark) {
+        .roof { stroke: #dd9163; }
+        .lamp { fill: #e0b563; }
+      }
+    </style>
+    <path class="roof" d="M4 16.5 L16 5.5 L28 16.5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="7.5" y="15.5" width="17" height="12" rx="3.5" fill="#e5bfa3"/>
+    <rect x="13.2" y="20.5" width="5.6" height="7" rx="1.8" fill="#b1583a"/>
+    <circle class="lamp" cx="16" cy="11.2" r="2"/>
   </svg>`;
   const link = document.createElement('link');
   link.rel = 'icon';
