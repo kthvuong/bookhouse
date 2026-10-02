@@ -106,7 +106,7 @@
   async function cardHTML(item) {
     shownItems.set(item.externalId, item);
     const fakeEntry = {
-      book: { id: item.externalId, title: item.title, authors: item.authors, coverUrl: item.coverUrl, hasCachedCover: false },
+      book: { id: item.externalId, title: item.title, authors: item.authors, coverUrl: item.coverUrl },
       status: null,
       // The gold star row means "your rating" everywhere else in the app, and
       // nothing here is yours yet — community scores are added below as labeled

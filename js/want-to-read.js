@@ -80,6 +80,13 @@
     if (state.view === 'grid') {
       grid.innerHTML = (await Promise.all(filtered.map(gridCardHTML))).join('');
       wireGridEvents();
+      // A book whose cover isn't on this device yet was drawn with a hashed
+      // glow; once its cover has been fetched, the glow takes its real colours.
+      const byId = new Map(filtered.map((e) => [e.book.id, e.book]));
+      grid.querySelectorAll('.tbr-glow-card').forEach(async (card) => {
+        const book = byId.get(card.dataset.bookId);
+        if (await cacheCover(book)) card.querySelector('.tbr-glow-tile').style.background = await coverGlowBackground(book);
+      });
     } else {
       const draggable = !filtersActive();
       list.innerHTML = (await Promise.all(filtered.map((e) => rowHTML(e, draggable)))).join('');

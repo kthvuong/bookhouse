@@ -86,6 +86,7 @@
     const wrap = root.querySelector('#book-cover-wrap');
     if (!wrap) return;
     wrap.innerHTML = await coverMarkup(book);
+    cacheCover(book); // keeps a copy on this device if it doesn't have one yet
   }
 
   async function fillHardcoverRatingAsync() {

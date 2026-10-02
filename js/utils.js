@@ -451,14 +451,70 @@ function coverFallbackHTML(title) {
 /** Resolves the best available <img> src / fallback markup for a book's cover. */
 async function coverMarkup(book, className = '') {
   if (!book) return coverFallbackHTML('');
-  if (book.hasCachedCover) {
-    const url = await Storage.Covers.getObjectUrl(book.id);
-    if (url) return `<img class="${className}" src="${url}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">${coverFallbackHiddenHTML(book.title)}`;
-  }
+  // This device's own copy when it has one (see cacheCover below), otherwise
+  // the cover's address on the catalog it came from.
+  const url = book.id ? await Storage.Covers.getObjectUrl(book.id).catch(() => null) : null;
+  if (url) return `<img class="${className}" src="${url}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">${coverFallbackHiddenHTML(book.title)}`;
   if (book.coverUrl) {
     return `<img class="${className}" src="${escapeHtml(book.coverUrl)}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">${coverFallbackHiddenHTML(book.title)}`;
   }
   return coverFallbackHTML(book.title);
+}
+
+/* ---- keeping a copy of each cover on this device ----
+   A cover has to be stored here before its colours can be sampled, and
+   before it can be shown offline or go into a backup. Covers aren't synced,
+   so a book added on another device — or before api/cover.js could fetch
+   Hardcover's and Google's — has none yet. Pages that want one call
+   cacheCover(), and it's fetched then. */
+const COVER_RETRY_MS = 60 * 60 * 1000; // a cover that couldn't be fetched is left alone for an hour
+const COVER_MISSES_KEY = 'bh_cover_misses'; // { bookId: when to try again }
+const coverFetches = new Map(); // bookId -> the fetch under way
+const coverFetchesWaiting = [];
+let coverFetchesFree = 4; // at a time, so a full shelf doesn't ask for fifty covers at once
+
+function readCoverMisses() {
+  try { return JSON.parse(localStorage.getItem(COVER_MISSES_KEY) || '{}'); } catch (e) { return {}; }
+}
+
+function noteCoverMiss(bookId) {
+  const now = Date.now();
+  const misses = readCoverMisses();
+  Object.keys(misses).forEach((id) => { if (!(misses[id] > now)) delete misses[id]; });
+  misses[bookId] = now + COVER_RETRY_MS;
+  try { localStorage.setItem(COVER_MISSES_KEY, JSON.stringify(misses)); } catch (e) {}
+}
+
+async function inCoverQueue(task) {
+  if (coverFetchesFree > 0) coverFetchesFree--;
+  else await new Promise((resolve) => coverFetchesWaiting.push(resolve));
+  try {
+    return await task();
+  } finally {
+    const next = coverFetchesWaiting.shift();
+    if (next) next(); // hands this slot straight on
+    else coverFetchesFree++;
+  }
+}
+
+/** Makes sure this device holds a copy of a library book's cover. Resolves
+ *  true if one was fetched and stored just now (worth repainting anything
+ *  drawn from the cover), false if it was already here or can't be had. */
+function cacheCover(book) {
+  if (!book || !book.id || !book.coverUrl || typeof BooksAPI === 'undefined') return Promise.resolve(false);
+  if (!coverFetches.has(book.id)) {
+    const fetching = (async () => {
+      const stored = await Storage.Covers.get(book.id);
+      if (stored && stored.blob) return false;
+      if (navigator.onLine === false || readCoverMisses()[book.id] > Date.now()) return false;
+      const blob = await inCoverQueue(() => BooksAPI.fetchCoverBlob(book.coverUrl));
+      const kept = !!blob && await Storage.Covers.save(book.id, blob, book.coverUrl).then(() => true, () => false);
+      if (!kept) noteCoverMiss(book.id);
+      return kept;
+    })().catch(() => false).finally(() => coverFetches.delete(book.id));
+    coverFetches.set(book.id, fetching);
+  }
+  return coverFetches.get(book.id);
 }
 
 /** Samples a locally-cached cover blob's average color (small canvas read —
@@ -469,13 +525,6 @@ async function coverMarkup(book, className = '') {
 function sampleImageColor(url, { vibrant = false } = {}) {
   return new Promise((resolve) => {
     const img = new Image();
-    // Needed for remote (not-yet-cached) covers so the canvas isn't
-    // "tainted" by a cross-origin read; harmless no-op for blob: URLs.
-    // If the remote host doesn't send CORS headers the image simply
-    // fails to load here (onerror below), and we fall back gracefully —
-    // the actual cover shown on the card is a separate plain <img> and
-    // is never affected either way.
-    img.crossOrigin = 'anonymous';
     img.onload = () => {
       try {
         const size = 24;
@@ -516,21 +565,20 @@ function hashColor(str) {
   return HASH_PALETTE[hash % HASH_PALETTE.length];
 }
 
+/** [r,g,b] sampled from the copy of a book's cover stored on this device,
+ *  or null if there isn't one (cacheCover fetches it). Options pass through
+ *  to sampleImageColor. */
+async function coverColor(book, opts) {
+  let url = null;
+  try { url = book && book.id ? await Storage.Covers.getObjectUrl(book.id) : null; } catch (e) {}
+  if (!url) return null;
+  try { return await sampleImageColor(url, opts); } finally { URL.revokeObjectURL(url); }
+}
+
 /** A book's representative [r,g,b]: sampled from its cover when we can,
  *  otherwise a stable hashed color. Options pass through to sampleImageColor. */
 async function bookColor(book, opts) {
-  let rgb = null;
-  let sampleUrl = null;
-  if (book && book.hasCachedCover) {
-    try { sampleUrl = await Storage.Covers.getObjectUrl(book.id); } catch (e) {}
-  }
-  // Not-yet-added books (e.g. Explore recommendations) have no cached
-  // blob yet — sample straight from the remote cover URL instead.
-  if (!sampleUrl && book && book.coverUrl) sampleUrl = book.coverUrl;
-  if (sampleUrl) {
-    try { rgb = await sampleImageColor(sampleUrl, opts); } catch (e) {}
-  }
-  return rgb || hashColor((book && (book.title || book.id || book.externalId)) || 'book');
+  return (await coverColor(book, opts)) || hashColor((book && (book.title || book.id || book.externalId)) || 'book');
 }
 
 /** A soft radial-glow CSS background for a book, tinted from its actual

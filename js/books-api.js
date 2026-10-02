@@ -9,7 +9,9 @@
 
      provider.search(query)      -> [{ externalId, title, authors, ... }]
      provider.getDetails(id)     -> { description, genres }
-     provider.fetchCoverBlob(url)-> Blob | null
+
+   A cover is fetched the same way whichever catalog listed the book
+   (BooksAPI.fetchCoverBlob — see "Cover images" below).
 
    Only BooksAPI.* should be called from the rest of the app.
    ============================================================ */
@@ -121,19 +123,6 @@ const BooksAPI = (() => {
         return { description: '', genres: [] };
       }
     },
-
-    async fetchCoverBlob(coverUrl) {
-      if (!coverUrl) return null;
-      try {
-        const res = await fetch(coverUrl);
-        if (!res.ok) return null;
-        const blob = await res.blob();
-        if (blob.size < 200) return null; // OL serves a tiny 1x1 for missing covers
-        return blob;
-      } catch {
-        return null;
-      }
-    },
   };
 
   function googleApiKey() {
@@ -239,19 +228,6 @@ const BooksAPI = (() => {
         return { description: '', genres: [] };
       }
     },
-
-    async fetchCoverBlob(coverUrl) {
-      if (!coverUrl) return null;
-      try {
-        const res = await fetch(coverUrl);
-        if (!res.ok) return null;
-        const blob = await res.blob();
-        if (blob.size < 200) return null;
-        return blob;
-      } catch {
-        return null;
-      }
-    },
   };
 
   /* ---- Hardcover (search only), through our own api/search.js ----
@@ -327,6 +303,44 @@ const BooksAPI = (() => {
       return results;
     } catch (e) {
       return []; // slow or unreachable: fall back to the other catalogs alone
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /* ---- Cover images ----
+     A page can show an image from any host, but it can only read one — to
+     keep a copy on this device, or to sample its colours — if the host
+     sends CORS headers. Open Library does. Hardcover's and Google Books'
+     image hosts don't, so those covers come through our own api/cover.js
+     (the same sync-token-gated backend as search), which keeps the matching
+     list of hosts it will fetch from. */
+  const COVER_HOSTS_VIA_API = ['assets.hardcover.app', 'production-img.hardcover.app', 'books.google.com', 'books.googleusercontent.com'];
+  const COVER_TIMEOUT_MS = 20000; // Open Library's covers come from archive.org, which can take its time
+
+  function coverGoesViaApi(coverUrl) {
+    try { return COVER_HOSTS_VIA_API.includes(new URL(coverUrl).hostname); } catch (e) { return false; }
+  }
+
+  /** The cover at `coverUrl` as a Blob, or null if it can't be had. */
+  async function fetchCoverBlob(coverUrl) {
+    if (!coverUrl) return null;
+    const viaApi = coverGoesViaApi(coverUrl);
+    // Without a sync token there's no reading these at all, and asking the
+    // host directly would only put a CORS error in the console.
+    if (viaApi && (typeof Sync === 'undefined' || !Sync.isConfigured())) return null;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), COVER_TIMEOUT_MS);
+    try {
+      const res = viaApi
+        ? await fetch(`/api/cover?url=${encodeURIComponent(coverUrl)}`, { headers: { Authorization: `Bearer ${Sync.token()}` }, signal: ctrl.signal })
+        : await fetch(coverUrl, { signal: ctrl.signal });
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      if (blob.size < 200) return null; // OL serves a tiny 1x1 for missing covers
+      return blob;
+    } catch {
+      return null;
     } finally {
       clearTimeout(timer);
     }
@@ -450,6 +464,6 @@ const BooksAPI = (() => {
       if (id.startsWith('/works/')) return OpenLibraryProvider.getDetails(id);
       return GoogleBooksProvider.getDetails(id);
     },
-    fetchCoverBlob: (url) => activeProvider.fetchCoverBlob(url),
+    fetchCoverBlob,
   };
 })();

@@ -225,7 +225,12 @@
       const book = byId.get(el.dataset.bookId).book;
       const key = spineKey(book);
       if (cache[key]) return;
-      const color = spineColor(await bookColor(book, { vibrant: true }));
+      await cacheCover(book);
+      const rgb = await coverColor(book, { vibrant: true });
+      // No cover to sample (yet): the spine keeps the hashed colour it was
+      // drawn with, and nothing is remembered, so a later visit tries again.
+      if (!rgb) return;
+      const color = spineColor(rgb);
       el.style.setProperty('--spine', color);
       cache[key] = color;
       writeSpineColors(cache);
@@ -370,11 +375,17 @@
 
   // Keyed on the cover too, so changing a book's cover re-samples its spine.
   function spineKey(book) { return `${book.id}|${book.coverUrl || ''}`; }
+  // Only colours sampled from a real cover are remembered. The first version
+  // of this cache ('bh_spine_colors') also kept the hashed stand-in for every
+  // cover that couldn't be read, so it's dropped rather than carried over.
   function readSpineColors() {
-    try { return JSON.parse(localStorage.getItem('bh_spine_colors') || '{}'); } catch (e) { return {}; }
+    try {
+      localStorage.removeItem('bh_spine_colors');
+      return JSON.parse(localStorage.getItem('bh_spine_colors_v2') || '{}');
+    } catch (e) { return {}; }
   }
   function writeSpineColors(map) {
-    try { localStorage.setItem('bh_spine_colors', JSON.stringify(map)); } catch (e) {}
+    try { localStorage.setItem('bh_spine_colors_v2', JSON.stringify(map)); } catch (e) {}
   }
 
   async function currentlyReadingCardHTML(entry) {

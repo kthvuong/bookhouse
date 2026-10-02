@@ -31,7 +31,9 @@
    aren't synced (blobs stay device-local); everything else round-trips
    through the same exportForSync()/importAll() shape used by the
    manual JSON backup in Settings (exportAll(), which also includes
-   covers).
+   covers). So a write to the covers store pushes nothing, and whether
+   this device holds a book's cover is asked of that store (Covers.get)
+   rather than recorded on the book, which every device shares.
    ============================================================ */
 
 const Storage = (() => {
@@ -177,8 +179,9 @@ const Storage = (() => {
     }
   }
 
-  function scheduleAutoPush() {
-    if (!syncAvailable()) return;
+  function scheduleAutoPush(storeName) {
+    // A cover kept on (or dropped from) this device changes nothing that's synced.
+    if (!syncAvailable() || !SYNCED_STORES.includes(storeName)) return;
     pushDirty = true;
     clearTimeout(pushTimer);
     pushTimer = setTimeout(() => flushPush(), 2500);
@@ -215,7 +218,7 @@ const Storage = (() => {
     return tx(storeName, 'readwrite').then((t) => {
       const store = t.objectStore(storeName);
       return reqToPromise(store.put(value)).then(() => {
-        scheduleAutoPush();
+        scheduleAutoPush(storeName);
         return value;
       });
     });
@@ -237,7 +240,7 @@ const Storage = (() => {
 
   function remove(storeName, key) {
     return tx(storeName, 'readwrite').then((t) =>
-      reqToPromise(t.objectStore(storeName).delete(key)).then(() => scheduleAutoPush())
+      reqToPromise(t.objectStore(storeName).delete(key)).then(() => scheduleAutoPush(storeName))
     );
   }
 
@@ -249,7 +252,7 @@ const Storage = (() => {
 
   function clearStore(storeName) {
     return tx(storeName, 'readwrite').then((t) =>
-      reqToPromise(t.objectStore(storeName).clear()).then(() => scheduleAutoPush())
+      reqToPromise(t.objectStore(storeName).clear()).then(() => scheduleAutoPush(storeName))
     );
   }
 
@@ -281,7 +284,6 @@ const Storage = (() => {
         pageCount: book.pageCount || null,
         genres: book.genres || [],
         coverUrl: book.coverUrl || '',
-        hasCachedCover: false,
         createdAt: nowIso(),
       };
       await put('books', record);
@@ -295,10 +297,7 @@ const Storage = (() => {
   };
 
   const Covers = {
-    async save(bookId, blob, remoteUrl) {
-      await put('covers', { bookId, blob, remoteUrl: remoteUrl || '' });
-      await Books.update(bookId, { hasCachedCover: true });
-    },
+    save: (bookId, blob, remoteUrl) => put('covers', { bookId, blob, remoteUrl: remoteUrl || '' }),
     get: (bookId) => get('covers', bookId),
     async getObjectUrl(bookId) {
       const rec = await get('covers', bookId);
@@ -550,10 +549,12 @@ const Storage = (() => {
 
   async function importAll(data, { replace = true } = {}) {
     if (replace) {
-      await Promise.all([
-        'books', 'readingEntries', 'progressUpdates', 'readingSessions', 'quotes',
-        'collections', 'collectionItems', 'goals', 'wrapped', 'covers',
-      ].map(clearStore));
+      // This device's covers are only replaced by an import that brings its
+      // own (a full backup). A sync snapshot never does — clearing them for
+      // one (Sync Now) would throw away every cover stored here, and an
+      // uploaded cover can't be fetched again.
+      const stores = Array.isArray(data.covers) ? [...SYNCED_STORES, 'covers'] : SYNCED_STORES;
+      await Promise.all(stores.map(clearStore));
     }
     const puts = [];
     (data.books || []).forEach((r) => puts.push(put('books', r)));
