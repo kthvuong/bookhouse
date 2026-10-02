@@ -7,7 +7,7 @@
 
 async function coverRow(entries, max = 6) {
   const covers = await Promise.all(entries.slice(0, max).map((e) => coverMarkup(e.book)));
-  return `<div class="cover-row">${covers.map((c, i) => `<div class="cover-row-item" style="animation-delay:${i * 60}ms">${c}</div>`).join('')}</div>`;
+  return `<div class="cover-row">${covers.map((c, i) => `<div class="cover-row-item cover-wrap" style="animation-delay:${i * 60}ms">${c}</div>`).join('')}</div>`;
 }
 
 async function statHeroHTML(stats, opts = {}) {

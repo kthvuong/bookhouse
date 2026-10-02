@@ -21,6 +21,8 @@
   background: var(--surface-hover);
   transform: rotate(-1.5deg);
 }
+/* A bigger frame than a card's, so its no-cover title tile gets bigger type. */
+.book-header .cover-fallback { font-size: 18px; padding: 22px; }
 .book-header::before {
   content: '';
   position: absolute;
@@ -190,6 +192,7 @@
 
 @media (max-width: 720px) {
   .book-header { --cover-w: 130px; gap: var(--space-4); }
+  .book-header .cover-fallback { font-size: 13px; padding: 12px; }
   .book-header::before { width: 70px; height: 22px; left: calc(var(--cover-w) / 2 - 35px); top: -10px; }
   .save-bar { padding: 10px 12px; }
   .save-bar-hint { display: none; }

@@ -17,6 +17,7 @@
   box-shadow: var(--shadow-md);
   background: var(--surface-hover);
 }
+.cr-item .cover-fallback { font-size: 11px; padding: 8px; }
 .cr-item .cr-top {
   display: flex;
   justify-content: space-between;
