@@ -40,7 +40,6 @@
 .month-tile h3 { font-size: 20px; margin-bottom: 16px; }
 .month-tile .mini-stack { display: flex; margin-bottom: 16px; height: 96px; }
 .month-tile .mini-stack .tile { width: 60px; height: 92px; border-radius: 5px; overflow: hidden; box-shadow: var(--shadow-sm); background: var(--surface-hover); margin-right: -22px; border: 2px solid var(--bg-elevated); }
-.month-tile .mini-stack .tile img { width: 100%; height: 100%; object-fit: cover; }
 .month-tile .count-line { font-size: 13.5px; color: var(--text-muted); }
 
 .month-detail-panel {

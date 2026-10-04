@@ -119,10 +119,10 @@
 
   async function listRowHTML(entry) {
     const book = entry.book;
-    const cover = await coverMarkup(book, 'thumb');
+    const cover = await coverMarkup(book);
     return `
       <div class="book-row" data-book-id="${book.id}">
-        <div style="position:relative;width:42px;height:62px;flex-shrink:0;">${cover}</div>
+        <div class="thumb cover-wrap mini">${cover}</div>
         <div class="col-title">
           <div class="title">${escapeHtml(book.title)}</div>
           <div class="author">${escapeHtml(authorList(book.authors))}</div>

@@ -173,7 +173,7 @@
 }
 .ab-result-row:hover { background: var(--surface-hover); }
 .ab-result-row .thumb {
-  width: 34px; height: 50px; object-fit: cover; border-radius: 6px;
+  width: 34px; height: 50px; object-fit: cover; border-radius: 6px; overflow: hidden;
   background: var(--border); flex-shrink: 0; box-shadow: var(--shadow-sm);
 }
 .ab-result-row .meta { min-width: 0; flex: 1; }
@@ -245,6 +245,11 @@
    frame rather than leaving a gap or spilling out of it, and a book with
    no picture gets its title on a tinted tile instead. These apply to every
    .cover-wrap, so a new frame can't be the one that forgets them. */
+:root {
+  /* The tile's tint: pale under a title, deeper where the tile stands alone. */
+  --cover-tile: linear-gradient(155deg, var(--accent-tint), var(--surface-hover));
+  --cover-tile-plain: linear-gradient(155deg, var(--accent-soft), var(--border));
+}
 .cover-wrap { position: relative; }
 .cover-wrap img, .finished-popup-cover img { width: 100%; height: 100%; object-fit: cover; }
 .cover-wrap .cover-fallback, .finished-popup-cover .cover-fallback {
@@ -253,8 +258,13 @@
   text-align: center; padding: 14px;
   font-family: var(--font-serif); font-size: 13px; font-weight: 600;
   color: var(--text-secondary);
-  background: linear-gradient(155deg, var(--accent-tint), var(--surface-hover));
+  background: var(--cover-tile);
 }
+/* A frame too small to read a title in (a list thumbnail, the stacked
+   covers on History) is marked .mini: it keeps the tile and drops the
+   words, and the deeper tint makes up for them. */
+.cover-wrap.mini .cover-fallback { padding: 0; background: var(--cover-tile-plain); }
+.cover-wrap.mini .cover-fallback span { display: none; }
 
 /* ---------- Book cover card (grid) ---------- */
 .book-card {
@@ -311,7 +321,7 @@
 }
 .book-row:hover { background: var(--surface-hover); }
 .book-row .thumb {
-  width: 42px; height: 62px; object-fit: cover; border-radius: 7px;
+  width: 42px; height: 62px; border-radius: 7px; overflow: hidden;
   background: var(--surface-hover); flex-shrink: 0; box-shadow: var(--shadow-sm);
 }
 .book-row .col-title { flex: 2.2; min-width: 140px; }

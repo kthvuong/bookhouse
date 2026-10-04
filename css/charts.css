@@ -46,5 +46,4 @@
   box-shadow: var(--shadow-sm);
   background: var(--surface-hover);
 }
-.collage-tile img { width: 100%; height: 100%; object-fit: cover; }
-.collage-tile .cover-fallback { font-size: 9px; padding: 6px; }
+.collage-tile .cover-fallback { font-size: 9px; padding: 6px; overflow-wrap: anywhere; }

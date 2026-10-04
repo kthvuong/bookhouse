@@ -24,7 +24,16 @@
   aspect-ratio: 4/1.7;
 }
 .collection-tile .mini-collage .tile { border-radius: 4px; overflow: hidden; background: var(--surface-hover); }
-.collection-tile .mini-collage .tile img { width: 100%; height: 100%; object-fit: cover; }
+/* These tiles are .mini frames: with two or more collections to a row they
+   are 44 to 74px wide, too narrow for a title. A phone fits one collection
+   to a row (under 496px the grid has room for a single 220px column), and
+   then they are 60px and up: wide enough for the title in small type. */
+@media (max-width: 495px) {
+  .collection-tile .mini-collage .tile .cover-fallback {
+    padding: 5px; font-size: 9px; line-height: 1.25; overflow-wrap: anywhere; background: var(--cover-tile);
+  }
+  .collection-tile .mini-collage .tile .cover-fallback span { display: block; }
+}
 .collection-tile h3 { font-size: 17px; margin-bottom: 2px; }
 .collection-tile .count { font-size: 12.5px; color: var(--text-muted); }
 .collection-tile.new-tile {

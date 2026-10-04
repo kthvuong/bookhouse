@@ -45,7 +45,7 @@
       return `
         <div class="month-tile" data-month="${m}">
           <h3 class="serif">${name}</h3>
-          <div class="mini-stack">${covers.map((c) => `<div class="tile">${c}</div>`).join('')}</div>
+          <div class="mini-stack">${covers.map((c) => `<div class="tile cover-wrap mini">${c}</div>`).join('')}</div>
           <div class="count-line">${finished.length} book${finished.length === 1 ? '' : 's'} finished</div>
         </div>`;
     }));

@@ -36,7 +36,7 @@ async function collageSectionHTML(stats, title) {
   return `
     <section class="stat-section fade-in">
       <h2 class="stat-section-title">${title || 'Everything you finished'}</h2>
-      <div class="cover-collage">${covers.map((c) => `<div class="collage-tile">${c}</div>`).join('')}</div>
+      <div class="cover-collage">${covers.map((c) => `<div class="collage-tile cover-wrap">${c}</div>`).join('')}</div>
     </section>`;
 }
 
@@ -360,7 +360,7 @@ function openSuperlativePicker({ label, eligible, onPick }) {
     }
     const rows = await Promise.all(filtered.map(async (e) => `
       <div class="ab-result-row" data-pick-book-id="${e.book.id}">
-        ${await coverMarkup(e.book, 'thumb')}
+        <div class="thumb cover-wrap mini">${await coverMarkup(e.book)}</div>
         <div class="meta">
           <div class="title">${escapeHtml(e.book.title)}</div>
           <div class="sub">${escapeHtml(authorList(e.book.authors))}</div>

@@ -28,7 +28,7 @@
     const entries = await Promise.all(items.slice(0, 4).map((i) => Storage.ReadingEntries.get(i.readingEntryId)));
     const books = await Promise.all(entries.filter(Boolean).map((e) => Storage.Books.get(e.bookId)));
     const covers = await Promise.all(books.filter(Boolean).map((b) => coverMarkup(b)));
-    const tiles = covers.map((c) => `<div class="tile">${c}</div>`).join('') +
+    const tiles = covers.map((c) => `<div class="tile cover-wrap mini">${c}</div>`).join('') +
       Array(Math.max(0, 4 - covers.length)).fill('<div class="tile"></div>').join('');
     return `
       <div class="collection-tile" data-collection-id="${collection.id}">

@@ -58,6 +58,6 @@ function donutChartSVG(data, { size = 160, stroke = 26 } = {}) {
 function coverCollageHTML(items, { max = 24 } = {}) {
   const shown = items.slice(0, max);
   return `<div class="cover-collage">${shown.map((it) => `
-    <div class="collage-tile" title="${escapeHtml(it.title || '')}">${it.coverHtml}</div>
+    <div class="collage-tile cover-wrap" title="${escapeHtml(it.title || '')}">${it.coverHtml}</div>
   `).join('')}</div>`;
 }

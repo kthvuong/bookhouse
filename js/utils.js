@@ -448,8 +448,10 @@ function coverFallbackHTML(title) {
   return `<div class="cover-fallback"><span>${escapeHtml(truncate(title, 60))}</span></div>`;
 }
 
-/** Resolves the best available <img> src / fallback markup for a book's cover. */
-async function coverMarkup(book, className = '') {
+/** Resolves the best available <img> src / fallback markup for a book's cover.
+ *  It goes inside a .cover-wrap frame (css/components.css), which sizes the
+ *  picture and holds the fallback tile. */
+async function coverMarkup(book) {
   if (!book) return coverFallbackHTML('');
   // This device's own copy when it has one (see cacheCover below), otherwise
   // the cover's address on the catalog it came from.
@@ -458,7 +460,7 @@ async function coverMarkup(book, className = '') {
   if (!src) return coverFallbackHTML(book.title);
   // data-cover-of lets a sharper copy be put in its place once one has been
   // fetched (js/sharper-covers.js).
-  return `<img class="${className}" src="${src}" alt="" loading="lazy" data-cover-of="${escapeHtml(book.id)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">${coverFallbackHiddenHTML(book.title)}`;
+  return `<img src="${src}" alt="" loading="lazy" data-cover-of="${escapeHtml(book.id)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">${coverFallbackHiddenHTML(book.title)}`;
 }
 
 /* ---- keeping a copy of each cover on this device ----

@@ -103,7 +103,7 @@
     return `
       <div class="tbr-glow-card" data-book-id="${book.id}">
         <div class="tbr-glow-tile" style="background:${bg};">
-          <div class="tbr-glow-cover">${cover}</div>
+          <div class="tbr-glow-cover cover-wrap">${cover}</div>
         </div>
         <div class="tbr-glow-title">${escapeHtml(book.title)}</div>
         <div class="tbr-glow-author">${escapeHtml(authorList(book.authors))}</div>
@@ -118,11 +118,11 @@
 
   async function rowHTML(entry, draggable) {
     const book = entry.book;
-    const cover = await coverMarkup(book, 'thumb');
+    const cover = await coverMarkup(book);
     return `
       <div class="tbr-row" data-entry-id="${entry.id}" ${draggable ? 'draggable="true"' : ''}>
         <span class="drag-handle ${draggable ? '' : 'disabled'}">⠿</span>
-        <a href="book.html?id=${book.id}" style="position:relative;display:block;width:40px;height:58px;flex-shrink:0;">${cover}</a>
+        <a href="book.html?id=${book.id}" class="thumb cover-wrap mini">${cover}</a>
         <div class="info">
           <a href="book.html?id=${book.id}"><div class="title">${escapeHtml(book.title)}</div></a>
           <div class="author">${escapeHtml(authorList(book.authors))}</div>
