@@ -114,8 +114,8 @@
           <div class="authors-line">by ${escapeHtml(authorList(book.authors))}</div>
 
           <div class="meta-strip">
-            ${book.pageCount ? `<span class="meta-item"><strong>${book.pageCount}</strong> pages</span>` : ''}
-            ${book.firstPublishYear ? `<span class="meta-item">Published <strong>${book.firstPublishYear}</strong></span>` : ''}
+            ${book.pageCount ? `<span class="meta-item"><strong>${escapeHtml(String(book.pageCount))}</strong> pages</span>` : ''}
+            ${book.firstPublishYear ? `<span class="meta-item">Published <strong>${escapeHtml(String(book.firstPublishYear))}</strong></span>` : ''}
             ${isbn ? `<span class="meta-item">ISBN <strong>${escapeHtml(isbn)}</strong></span>` : ''}
             <span class="meta-item" id="hardcover-rating-mount"></span>
           </div>
@@ -190,7 +190,7 @@
       <div class="progress-input-row" style="margin-top:20px;">
         <div class="field">
           <label>Current page</label>
-          <input type="number" class="input" id="progress-page-input" min="0" ${book.pageCount ? `max="${book.pageCount}"` : ''} placeholder="e.g. 152">
+          <input type="number" class="input" id="progress-page-input" min="0" ${book.pageCount ? `max="${escapeHtml(String(book.pageCount))}"` : ''} placeholder="e.g. 152">
         </div>
         <div class="field">
           <label>or percent</label>
@@ -276,7 +276,7 @@
     return `
       <div class="quote-item" data-quote-id="${q.id}">
         <p class="quote-text">"${escapeHtml(q.text)}"</p>
-        ${q.pageNumber ? `<div class="quote-page">p. ${q.pageNumber}</div>` : ''}
+        ${q.pageNumber ? `<div class="quote-page">p. ${escapeHtml(String(q.pageNumber))}</div>` : ''}
         <div class="quote-actions">
           <button class="link-btn" data-edit-quote="${q.id}">Edit</button>
           <button class="link-btn" data-delete-quote="${q.id}">Delete</button>
@@ -289,7 +289,7 @@
       <div class="quote-item editing" data-quote-id="${q.id}">
         <textarea class="textarea" id="edit-quote-text-${q.id}" style="min-height:70px;">${escapeHtml(q.text)}</textarea>
         <div class="form-row" style="margin-top:8px;">
-          <div class="field" style="max-width:100px;"><label>Page</label><input type="number" class="input" id="edit-quote-page-${q.id}" value="${q.pageNumber || ''}"></div>
+          <div class="field" style="max-width:100px;"><label>Page</label><input type="number" class="input" id="edit-quote-page-${q.id}" value="${escapeHtml(String(q.pageNumber || ''))}"></div>
         </div>
         <div style="display:flex;gap:8px;margin-top:10px;">
           <button class="btn btn-sm btn-primary" data-save-quote-edit="${q.id}">Save</button>

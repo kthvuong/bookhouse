@@ -130,8 +130,8 @@
         <div class="col-status"><span class="status-badge status-${entry.status}">${STATUS_LABELS[entry.status]}</span></div>
         <div class="col">${entry.rating ? starsDisplayHTML(entry.rating, 'sm') : '<span class="text-muted">Not rated</span>'}</div>
         <div class="col">${FORMAT_LABELS[entry.format] || ''}</div>
-        <div class="col">${book.firstPublishYear || ''}</div>
-        <div class="col">${book.pageCount ? book.pageCount + ' pg' : ''}</div>
+        <div class="col">${escapeHtml(String(book.firstPublishYear || ''))}</div>
+        <div class="col">${book.pageCount ? escapeHtml(book.pageCount + ' pg') : ''}</div>
       </div>`;
   }
 

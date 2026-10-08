@@ -396,7 +396,7 @@
         <div class="title">${escapeHtml(truncate(entry.book.title, 50))}</div>
         <div class="author">${escapeHtml(authorList(entry.book.authors))}</div>
         <div class="progress-track"><span style="width:${entry.progressPercent || 0}%"></span></div>
-        <div class="progress-caption"><span>${entry.progressPercent || 0}%</span><span>${entry.currentPage || 0}${entry.book.pageCount ? ' / ' + entry.book.pageCount : ''} pg</span></div>
+        <div class="progress-caption"><span>${entry.progressPercent || 0}%</span><span>${escapeHtml(`${entry.currentPage || 0}${entry.book.pageCount ? ' / ' + entry.book.pageCount : ''}`)} pg</span></div>
       </div>`;
   }
 

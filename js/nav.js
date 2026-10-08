@@ -371,7 +371,7 @@ function externalRowHTML(result, idx) {
       ${cover}
       <div class="meta">
         <div class="title">${escapeHtml(result.title)}</div>
-        <div class="sub">${escapeHtml(authorList(result.authors))}${result.firstPublishYear ? ' · ' + result.firstPublishYear : ''}</div>
+        <div class="sub">${escapeHtml(authorList(result.authors))}${result.firstPublishYear ? ' · ' + escapeHtml(String(result.firstPublishYear)) : ''}</div>
       </div>
       <span class="chevron">›</span>
     </div>`;

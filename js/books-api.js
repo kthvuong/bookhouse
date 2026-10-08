@@ -25,6 +25,14 @@ const BooksAPI = (() => {
     };
   }
 
+  /** A catalog's year, page count or edition count as a whole number, or
+   *  null. These go onto the page as they are, so anything a catalog sends
+   *  that isn't a plain number is dropped here rather than trusted there. */
+  function wholeNumber(value) {
+    const n = typeof value === 'number' ? value : (typeof value === 'string' && /^\d{1,6}$/.test(value.trim()) ? Number(value) : NaN);
+    return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+  }
+
   function coverUrlFromId(coverId, size) {
     return coverId ? `https://covers.openlibrary.org/b/id/${coverId}-${size}.jpg` : '';
   }
@@ -46,12 +54,12 @@ const BooksAPI = (() => {
           title: doc.title || 'Untitled',
           subtitle: doc.subtitle || '',
           authors: doc.author_name || [],
-          firstPublishYear: doc.first_publish_year || null,
+          firstPublishYear: wholeNumber(doc.first_publish_year),
           isbn10,
           isbn13,
           coverUrl: coverUrlFromId(doc.cover_i, 'M'),
           coverUrlLarge: coverUrlFromId(doc.cover_i, 'L'),
-          pageCount: doc.number_of_pages_median || null,
+          pageCount: wholeNumber(doc.number_of_pages_median),
           editionCount: (doc.edition_key || []).length,
         };
       });
@@ -70,13 +78,13 @@ const BooksAPI = (() => {
           title: w.title || 'Untitled',
           subtitle: '',
           authors: (w.authors || []).map((a) => a.name).filter(Boolean),
-          firstPublishYear: w.first_publish_year || null,
+          firstPublishYear: wholeNumber(w.first_publish_year),
           isbn10: '',
           isbn13: '',
           coverUrl: coverUrlFromId(w.cover_id, 'M'),
           coverUrlLarge: coverUrlFromId(w.cover_id, 'L'),
           pageCount: null,
-          editionCount: w.edition_count || null,
+          editionCount: wholeNumber(w.edition_count),
         }));
       } catch {
         return [];
@@ -94,13 +102,13 @@ const BooksAPI = (() => {
           title: w.title || 'Untitled',
           subtitle: '',
           authors: w.author_name || [],
-          firstPublishYear: w.first_publish_year || null,
+          firstPublishYear: wholeNumber(w.first_publish_year),
           isbn10: '',
           isbn13: '',
           coverUrl: coverUrlFromId(w.cover_i, 'M'),
           coverUrlLarge: coverUrlFromId(w.cover_i, 'L'),
           pageCount: null,
-          editionCount: w.edition_count || null,
+          editionCount: wholeNumber(w.edition_count),
         }));
       } catch {
         return [];
@@ -176,7 +184,7 @@ const BooksAPI = (() => {
       isbn13,
       coverUrl: cover,
       coverUrlLarge: cover,
-      pageCount: info.pageCount || null,
+      pageCount: wholeNumber(info.pageCount),
       editionCount: null,
       description: descriptionToText(info.description || ''),
       genres: extractGoogleGenres(info.categories),
@@ -255,12 +263,12 @@ const BooksAPI = (() => {
       title: r.title,
       subtitle: r.subtitle || '',
       authors: r.authors || [],
-      firstPublishYear: r.year || null,
+      firstPublishYear: wholeNumber(r.year),
       isbn10: r.isbn10 || '',
       isbn13: r.isbn13 || '',
       coverUrl: r.thumb || r.cover || fallback, // small, for lists
       coverUrlLarge: r.cover || fallback,
-      pageCount: r.pages || null,
+      pageCount: wholeNumber(r.pages),
       editionCount: null,
       description,
       genres,

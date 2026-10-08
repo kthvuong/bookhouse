@@ -128,7 +128,7 @@
           <div class="author">${escapeHtml(authorList(book.authors))}</div>
           ${(entry.tags || []).length ? `<div class="chip-row">${entry.tags.map((t) => `<span class="chip">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
         </div>
-        <span class="pages-label">${book.pageCount ? book.pageCount + ' pg' : ''}</span>
+        <span class="pages-label">${book.pageCount ? escapeHtml(book.pageCount + ' pg') : ''}</span>
         <select class="priority-select priority-${entry.priority}" data-priority-select>
           <option value="high" ${entry.priority === 'high' ? 'selected' : ''}>High</option>
           <option value="normal" ${entry.priority === 'normal' ? 'selected' : ''}>Normal</option>

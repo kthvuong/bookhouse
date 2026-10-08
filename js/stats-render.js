@@ -135,7 +135,7 @@ async function extremeCard(entry, label, value) {
       <div class="cover-wrap">${cover}</div>
       <div class="extreme-label">${label}</div>
       <div class="extreme-title">${escapeHtml(entry.book.title)}</div>
-      <div class="extreme-value">${value}</div>
+      <div class="extreme-value">${escapeHtml(value)}</div>
     </div>`;
 }
 

@@ -91,6 +91,34 @@ const Storage = (() => {
     'quotes', 'collections', 'collectionItems', 'goals', 'wrapped',
   ];
 
+  /* Fields the pages treat as plain numbers and put on screen as they are.
+     Everything made in the app already is one; this is for data arriving
+     from outside (a sync snapshot, a backup file), where a "page count"
+     that is really a piece of HTML would otherwise be drawn as HTML. A
+     number stays, a string of digits becomes one, anything else is dropped. */
+  const NUMBER_FIELDS = {
+    books: ['pageCount', 'firstPublishYear'],
+    readingEntries: ['currentPage', 'progressPercent', 'rating', 'sortOrder'],
+    progressUpdates: ['currentPage', 'percent'],
+    readingSessions: ['pagesStarted', 'pagesEnded', 'minutes'],
+    quotes: ['pageNumber'],
+    goals: ['year', 'targetBooks', 'targetPages'],
+  };
+  const PRIORITIES = ['high', 'normal', 'low'];
+
+  function tidyRow(storeName, row) {
+    if (!row || typeof row !== 'object') return row;
+    let out = row;
+    const set = (key, value) => { if (out === row) out = { ...row }; out[key] = value; };
+    (NUMBER_FIELDS[storeName] || []).forEach((key) => {
+      const v = row[key];
+      if (v == null || typeof v === 'number') return;
+      set(key, typeof v === 'string' && /^\s*\d+(\.\d+)?\s*$/.test(v) ? Number(v) : null);
+    });
+    if (storeName === 'readingEntries' && row.priority != null && !PRIORITIES.includes(row.priority)) set('priority', 'normal');
+    return out;
+  }
+
   // Applies a pulled snapshot directly against the raw IDB handle (not
   // through put()/clearStore() below) so this can run from inside ready()
   // itself without recursing back into ready() through tx().
@@ -102,7 +130,7 @@ const Storage = (() => {
       SYNCED_STORES.forEach((name) => {
         const store = t.objectStore(name);
         store.clear();
-        (data[name] || []).forEach((row) => store.put(row));
+        (data[name] || []).forEach((row) => store.put(tidyRow(name, row)));
       });
     });
   }
@@ -561,15 +589,15 @@ const Storage = (() => {
       await Promise.all(stores.map(clearStore));
     }
     const puts = [];
-    (data.books || []).forEach((r) => puts.push(put('books', r)));
-    (data.readingEntries || []).forEach((r) => puts.push(put('readingEntries', r)));
-    (data.progressUpdates || []).forEach((r) => puts.push(put('progressUpdates', r)));
-    (data.readingSessions || []).forEach((r) => puts.push(put('readingSessions', r)));
-    (data.quotes || []).forEach((r) => puts.push(put('quotes', r)));
-    (data.collections || []).forEach((r) => puts.push(put('collections', r)));
-    (data.collectionItems || []).forEach((r) => puts.push(put('collectionItems', r)));
-    (data.goals || []).forEach((r) => puts.push(put('goals', r)));
-    (data.wrapped || []).forEach((r) => puts.push(put('wrapped', r)));
+    (data.books || []).forEach((r) => puts.push(put('books', tidyRow('books', r))));
+    (data.readingEntries || []).forEach((r) => puts.push(put('readingEntries', tidyRow('readingEntries', r))));
+    (data.progressUpdates || []).forEach((r) => puts.push(put('progressUpdates', tidyRow('progressUpdates', r))));
+    (data.readingSessions || []).forEach((r) => puts.push(put('readingSessions', tidyRow('readingSessions', r))));
+    (data.quotes || []).forEach((r) => puts.push(put('quotes', tidyRow('quotes', r))));
+    (data.collections || []).forEach((r) => puts.push(put('collections', tidyRow('collections', r))));
+    (data.collectionItems || []).forEach((r) => puts.push(put('collectionItems', tidyRow('collectionItems', r))));
+    (data.goals || []).forEach((r) => puts.push(put('goals', tidyRow('goals', r))));
+    (data.wrapped || []).forEach((r) => puts.push(put('wrapped', tidyRow('wrapped', r))));
     await Promise.all(puts);
 
     for (const c of data.covers || []) {
