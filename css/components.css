@@ -485,18 +485,27 @@
 }
 
 /* Phones: every modal becomes a bottom sheet — anchored where thumbs are,
-   sized to the *visible* screen (dvh, so Safari's toolbar can't push the
-   buttons out of reach), with its actions pinned to the bottom. Drag it
-   down from the top to dismiss (see enableSheetSwipe in nav.js). */
+   with its actions pinned to the bottom. It is sized to the part of the
+   screen that can be seen: Safari's toolbar takes some of it, the keyboard
+   takes half, and CSS alone isn't told about the keyboard, so nav.js
+   measures what's left (--visible-top, --visible-height) and the backdrop
+   covers exactly that. The sheet then sits on top of the keyboard, with its
+   search field and buttons in view, instead of behind it or off the top of
+   the screen. Drag it down by its top to dismiss (enableSheetSwipe, nav.js). */
 @media (max-width: 640px) {
-  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal-overlay {
+    align-items: flex-end; padding: 0;
+    top: var(--visible-top, 0px); bottom: auto; height: var(--visible-height, 100%);
+  }
   .modal,
   .modal.wide,
   .modal.modal-narrow,
   .modal.stepped {
     max-width: none;
-    max-height: 92vh;
-    max-height: 92dvh;
+    max-height: 92%;
+    /* With the keyboard up there's little room, and 92% of it would reach
+       up under the clock and battery of the home-screen app. */
+    max-height: min(92%, calc(100% - env(safe-area-inset-top) - 8px));
     border-radius: 22px 22px 0 0;
     padding-bottom: env(safe-area-inset-bottom);
     transform: translateY(100%);

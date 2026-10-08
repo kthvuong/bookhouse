@@ -142,6 +142,7 @@ function initHeader(activeKey) {
 
   initGlobalSearch();
   trackKeyboard();
+  trackVisibleArea();
   enableSheetSwipe();
 }
 
@@ -154,21 +155,62 @@ function trackKeyboard() {
     el.matches('textarea, select, [contenteditable="true"]') ||
     (el.matches('input') && !NON_TEXT.includes(el.type))
   );
-  document.addEventListener('focusin', (e) => {
-    if (isTextField(e.target)) document.body.classList.add('keyboard-open');
-  });
-  document.addEventListener('focusout', () => {
-    setTimeout(() => {
-      if (!isTextField(document.activeElement)) document.body.classList.remove('keyboard-open');
-    }, 80);
-  });
+  const sync = () => document.body.classList.toggle('keyboard-open', isTextField(document.activeElement));
+  document.addEventListener('focusin', sync);
+  // Not straight away: moving from one field to the next is a focusout
+  // followed by a focusin, and the bar shouldn't flicker in between.
+  document.addEventListener('focusout', () => setTimeout(sync, 80));
+  // A focused field that is taken off the page (a sheet closed with the
+  // keyboard still up) loses focus without any focusout, which left the tab
+  // bar hidden for good. So while the bar is hidden, every change to the
+  // page checks that the field is still there.
+  new MutationObserver(() => {
+    if (document.body.classList.contains('keyboard-open')) sync();
+  }).observe(document.body, { childList: true, subtree: true });
+}
+
+/* The on-screen keyboard covers the bottom of the screen without CSS
+   hearing about it, and iOS slides the page up to keep the focused field
+   in view. A sheet anchored to the bottom of the whole screen then sits
+   partly under the keyboard or, once it has grown tall with search
+   results, has its top (the search field itself) pushed off the top of the
+   screen. So the part of the screen that can actually be seen is measured
+   here and handed to CSS as --visible-top and --visible-height, which the
+   phone sheets size themselves to (components.css). */
+function trackVisibleArea() {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  const root = document.documentElement.style;
+  let top = null, height = null;
+  const update = () => {
+    // Pinched in, "what can be seen" is a corner of the page: leave the
+    // sheets full size (the CSS falls back to the whole screen).
+    const zoomed = vv.scale > 1.01;
+    const nextTop = zoomed ? null : vv.offsetTop;
+    const nextHeight = zoomed ? null : vv.height;
+    if (nextTop === top && nextHeight === height) return;
+    top = nextTop; height = nextHeight;
+    if (zoomed) {
+      root.removeProperty('--visible-top');
+      root.removeProperty('--visible-height');
+    } else {
+      root.setProperty('--visible-top', `${top}px`);
+      root.setProperty('--visible-height', `${height}px`);
+    }
+  };
+  vv.addEventListener('resize', update);
+  vv.addEventListener('scroll', update);
+  update();
 }
 
 /* Phones show modals as bottom sheets (components.css). Dragging a sheet
-   down from its top dismisses it, the way native sheets work. It closes by
-   "clicking" the backdrop, so each modal's own close/skip logic still runs.
-   The non-passive touchmove listener is only attached for the duration of
-   a drag, so ordinary page scrolling is never blocked. */
+   down dismisses it, the way native sheets work: from anywhere on a sheet
+   that has nothing to scroll, and by its top (the grab handle and title
+   row) on one that does. It closes by "clicking" the backdrop, so each
+   modal's own close/skip logic still runs. The non-passive touchmove
+   listener is only attached for the duration of a drag, so ordinary page
+   scrolling is never blocked. */
+const SHEET_GRAB_ZONE = 72; // px from the sheet's top edge
 function enableSheetSwipe() {
   const phone = window.matchMedia('(max-width: 640px)');
   let sheet = null, scroller = null, startY = 0, dy = 0, dragging = false;
@@ -192,6 +234,8 @@ function enableSheetSwipe() {
     s.style.transition = '';
     s.style.transform = '';
     if (dragging && dy > 90) {
+      // The keyboard goes with the sheet, rather than staying up over the page.
+      if (s.contains(document.activeElement)) document.activeElement.blur();
       s.closest('.modal-overlay').dispatchEvent(new MouseEvent('click', { bubbles: true }));
     }
     sheet = null; scroller = null; dragging = false;
@@ -204,6 +248,13 @@ function enableSheetSwipe() {
     // Stepped modals scroll an inner body rather than the sheet itself.
     const sc = e.target.closest('.modal-scroll-body') || s;
     if (sc.scrollTop > 0) return;
+    // On a sheet that scrolls, only its top strip is a handle. Further down,
+    // a downward drag is someone scrolling back up a list (search results,
+    // say), and at the top of the list it used to close the sheet under
+    // their finger.
+    const list = s.querySelector('.modal-scroll-body') || s;
+    const scrolls = list.scrollHeight > list.clientHeight + 1;
+    if (scrolls && e.touches[0].clientY - s.getBoundingClientRect().top > SHEET_GRAB_ZONE) return;
     sheet = s; scroller = sc; startY = e.touches[0].clientY; dy = 0; dragging = false;
     s.addEventListener('touchmove', onMove, { passive: false });
   }, { passive: true });
@@ -213,7 +264,12 @@ function enableSheetSwipe() {
 
 function closeMobileSearch() {
   const searchBox = document.getElementById('search-box');
-  if (searchBox) searchBox.classList.remove('mobile-open');
+  if (!searchBox || !searchBox.classList.contains('mobile-open')) return;
+  searchBox.classList.remove('mobile-open');
+  // Hiding a focused field doesn't always take the focus (or the keyboard)
+  // off it, so that's done by hand.
+  const input = document.getElementById('global-search-input');
+  if (input) input.blur();
 }
 
 function initGlobalSearch() {

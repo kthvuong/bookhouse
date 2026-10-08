@@ -36,6 +36,8 @@ const AddBookFlow = (() => {
   }
 
   function close() {
+    // The keyboard leaves with the sheet, not a moment after it.
+    if (modal.contains(document.activeElement)) document.activeElement.blur();
     overlay.classList.remove('open');
     setTimeout(() => { modal.innerHTML = ''; modal.className = 'modal wide'; }, 200);
   }

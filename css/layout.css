@@ -357,6 +357,16 @@ body::before {
     left: 8px; right: 8px;
     max-height: calc(100vh - var(--header-height) - var(--mobile-tabbar-height) - 90px);
     max-height: calc(100dvh - var(--header-height) - var(--dock-space) - env(safe-area-inset-top) - 90px);
+    /* Reaching the end of the list doesn't start dragging the page along. */
+    overscroll-behavior: contain;
+  }
+  /* While typing, the keyboard is where the tab bar was and a good deal
+     higher. The list stops above it (--visible-height, from nav.js) and
+     scrolls inside itself, rather than running on behind the keyboard,
+     where the only way to its last rows was to slide the whole page, search
+     field included, up off the screen. */
+  body.keyboard-open .search-box.mobile-open .search-results-panel {
+    max-height: calc(var(--visible-height, 100dvh) - var(--header-height) - env(safe-area-inset-top) - 90px);
   }
   .search-result-row { padding-top: 11px; padding-bottom: 11px; }
 }
