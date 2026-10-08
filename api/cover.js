@@ -15,6 +15,8 @@
    What comes back has to be an ordinary picture under MAX_BYTES.
    ============================================================ */
 
+const { authorize } = require('./_auth');
+
 // Hardcover's originals and its resized copies, and Google Books' covers.
 // js/books-api.js keeps the matching list of hosts to send here.
 const ALLOWED_HOSTS = new Set([
@@ -85,12 +87,7 @@ async function readUpTo(response, max) {
 }
 
 module.exports = async function handler(req, res) {
-  const authHeader = req.headers.authorization || '';
-  const providedToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-  if (!process.env.SYNC_TOKEN || providedToken !== process.env.SYNC_TOKEN) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
+  if (!(await authorize(req, res))) return;
   if (req.method !== 'GET') {
     res.status(405).json({ error: 'Method not allowed' });
     return;

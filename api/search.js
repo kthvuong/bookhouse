@@ -21,6 +21,7 @@
 
 const { Redis } = require('@upstash/redis');
 const { lastName } = require('./_hardcover-match');
+const { authorize } = require('./_auth');
 
 const HARDCOVER_ENDPOINT = 'https://api.hardcover.app/v1/graphql';
 const PER_PAGE = 25; // one page of hits, cleaned up and cached whole
@@ -186,12 +187,7 @@ function dedupe(list) {
 }
 
 module.exports = async function handler(req, res) {
-  const authHeader = req.headers.authorization || '';
-  const providedToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-  if (!process.env.SYNC_TOKEN || providedToken !== process.env.SYNC_TOKEN) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
+  if (!(await authorize(req, res))) return;
   if (req.method !== 'GET') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
@@ -233,7 +229,9 @@ module.exports = async function handler(req, res) {
     }
     const data = await gqlRes.json();
     if (data.errors) {
-      res.status(200).json({ results: [], reason: (data.errors[0] && data.errors[0].message) || 'Hardcover API error' });
+      // What Hardcover said goes to the function's log, not back to the page.
+      console.error('Hardcover search error:', data.errors);
+      res.status(200).json({ results: [], reason: 'Hardcover API error' });
       return;
     }
     const query = parseQuery(q);
@@ -247,6 +245,7 @@ module.exports = async function handler(req, res) {
     }
     send(results);
   } catch (e) {
-    res.status(200).json({ results: [], reason: e.message });
+    console.error('Hardcover search failed:', e);
+    res.status(200).json({ results: [], reason: 'Could not reach Hardcover' });
   }
 };

@@ -17,6 +17,7 @@
 
 const { Redis } = require('@upstash/redis');
 const { norm, lastName, titleVariants, pickMatches } = require('./_hardcover-match');
+const { authorize } = require('./_auth');
 
 const HARDCOVER_ENDPOINT = 'https://api.hardcover.app/v1/graphql';
 
@@ -132,17 +133,13 @@ async function handleBatch(req, res) {
   try {
     res.status(200).json({ results: await lookupBatch(clean) });
   } catch (e) {
-    res.status(200).json({ results: clean.map(() => null), reason: e.message });
+    console.error('Hardcover batch lookup failed:', e);
+    res.status(200).json({ results: clean.map(() => null), reason: 'Could not reach Hardcover' });
   }
 }
 
 module.exports = async function handler(req, res) {
-  const authHeader = req.headers.authorization || '';
-  const providedToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-  if (!process.env.SYNC_TOKEN || providedToken !== process.env.SYNC_TOKEN) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
+  if (!(await authorize(req, res))) return;
   if (req.method === 'POST') {
     await handleBatch(req, res);
     return;
@@ -169,6 +166,7 @@ module.exports = async function handler(req, res) {
     const [match] = await lookupBatch([{ title: String(title), author: String(author || '') }]);
     res.status(200).json(match || { rating: null });
   } catch (e) {
-    res.status(200).json({ rating: null, reason: e.message });
+    console.error('Hardcover lookup failed:', e);
+    res.status(200).json({ rating: null, reason: 'Could not reach Hardcover' });
   }
 };

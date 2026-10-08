@@ -105,9 +105,14 @@ const Storage = (() => {
     goals: ['year', 'targetBooks', 'targetPages'],
   };
   const PRIORITIES = ['high', 'normal', 'low'];
+  // Ids are written into links and attributes. The app's own are letters,
+  // digits and dashes; one carrying a quote, a bracket or a space isn't an
+  // id the app made, and the row it names is left out.
+  const ID_FIELDS = ['id', 'bookId', 'readingEntryId', 'collectionId'];
+  const safeId = (v) => v == null || ((typeof v === 'string' || typeof v === 'number') && /^[^\s"'<>&`]{1,200}$/.test(String(v)));
 
   function tidyRow(storeName, row) {
-    if (!row || typeof row !== 'object') return row;
+    if (!row || typeof row !== 'object' || !ID_FIELDS.every((key) => safeId(row[key]))) return null;
     let out = row;
     const set = (key, value) => { if (out === row) out = { ...row }; out[key] = value; };
     (NUMBER_FIELDS[storeName] || []).forEach((key) => {
@@ -130,7 +135,7 @@ const Storage = (() => {
       SYNCED_STORES.forEach((name) => {
         const store = t.objectStore(name);
         store.clear();
-        (data[name] || []).forEach((row) => store.put(tidyRow(name, row)));
+        (data[name] || []).map((row) => tidyRow(name, row)).filter(Boolean).forEach((row) => store.put(row));
       });
     });
   }
@@ -589,19 +594,19 @@ const Storage = (() => {
       await Promise.all(stores.map(clearStore));
     }
     const puts = [];
-    (data.books || []).forEach((r) => puts.push(put('books', tidyRow('books', r))));
-    (data.readingEntries || []).forEach((r) => puts.push(put('readingEntries', tidyRow('readingEntries', r))));
-    (data.progressUpdates || []).forEach((r) => puts.push(put('progressUpdates', tidyRow('progressUpdates', r))));
-    (data.readingSessions || []).forEach((r) => puts.push(put('readingSessions', tidyRow('readingSessions', r))));
-    (data.quotes || []).forEach((r) => puts.push(put('quotes', tidyRow('quotes', r))));
-    (data.collections || []).forEach((r) => puts.push(put('collections', tidyRow('collections', r))));
-    (data.collectionItems || []).forEach((r) => puts.push(put('collectionItems', tidyRow('collectionItems', r))));
-    (data.goals || []).forEach((r) => puts.push(put('goals', tidyRow('goals', r))));
-    (data.wrapped || []).forEach((r) => puts.push(put('wrapped', tidyRow('wrapped', r))));
+    (data.books || []).map((r) => tidyRow('books', r)).filter(Boolean).forEach((r) => puts.push(put('books', r)));
+    (data.readingEntries || []).map((r) => tidyRow('readingEntries', r)).filter(Boolean).forEach((r) => puts.push(put('readingEntries', r)));
+    (data.progressUpdates || []).map((r) => tidyRow('progressUpdates', r)).filter(Boolean).forEach((r) => puts.push(put('progressUpdates', r)));
+    (data.readingSessions || []).map((r) => tidyRow('readingSessions', r)).filter(Boolean).forEach((r) => puts.push(put('readingSessions', r)));
+    (data.quotes || []).map((r) => tidyRow('quotes', r)).filter(Boolean).forEach((r) => puts.push(put('quotes', r)));
+    (data.collections || []).map((r) => tidyRow('collections', r)).filter(Boolean).forEach((r) => puts.push(put('collections', r)));
+    (data.collectionItems || []).map((r) => tidyRow('collectionItems', r)).filter(Boolean).forEach((r) => puts.push(put('collectionItems', r)));
+    (data.goals || []).map((r) => tidyRow('goals', r)).filter(Boolean).forEach((r) => puts.push(put('goals', r)));
+    (data.wrapped || []).map((r) => tidyRow('wrapped', r)).filter(Boolean).forEach((r) => puts.push(put('wrapped', r)));
     await Promise.all(puts);
 
     for (const c of data.covers || []) {
-      if (!c.dataUrl) continue;
+      if (!c.dataUrl || !safeId(c.bookId)) continue;
       const blob = await (await fetch(c.dataUrl)).blob();
       await put('covers', { bookId: c.bookId, blob, remoteUrl: c.remoteUrl || '' });
     }
