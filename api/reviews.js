@@ -72,26 +72,33 @@ function rowsFrom(results) {
   }));
 }
 
-/** The first search is the whole title plus the author's last name, which
- *  finds the right book among others of the same title. The second, for a
- *  book the first didn't find, is the title alone, cut at a colon: Hardcover
- *  often files "Atomic Habits: An Easy & Proven Way…" as plain "Atomic
- *  Habits", and its search wants every word typed to be there. */
-function searchText(book, attempt) {
+/** What to search for, in the order to try it. The title alone comes first:
+ *  it puts the best-known book of that name on top ("Dune herbert" buries
+ *  Dune itself under its sequels and study guides). Then the title with the
+ *  author's last name, for a book that shares its title with better-known
+ *  ones. Last, the title cut at a colon: Hardcover often files "Atomic
+ *  Habits: An Easy & Proven Way…" as plain "Atomic Habits", and its search
+ *  wants every word typed to be there. */
+function searchTexts(book) {
   const title = clean(book.title);
-  if (attempt === 0) return `${title} ${lastName(book.author)}`.trim();
-  return titleVariants(title).slice(0, 2).pop();
+  const last = lastName(book.author);
+  const texts = [title];
+  if (last) texts.push(`${title} ${last}`);
+  texts.push(titleVariants(title).slice(0, 2).pop());
+  return [...new Set(texts.filter(Boolean))];
 }
+
+const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** One request for up to 5 books. Returns their rows, aligned, or null if
  *  Hardcover didn't answer properly (which is written to the function's log). */
-async function searchGroup(group, attempt) {
+async function searchOnce(texts) {
   const variables = {};
-  group.forEach((b, i) => { variables[`q${i}`] = searchText(b, attempt); });
+  texts.forEach((text, i) => { variables[`q${i}`] = text; });
   const gqlRes = await fetch(HARDCOVER_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.HARDCOVER_API_TOKEN}` },
-    body: JSON.stringify({ query: searchQuery(group.length), variables }),
+    body: JSON.stringify({ query: searchQuery(texts.length), variables }),
   });
   if (!gqlRes.ok) {
     console.error(`Hardcover rating lookup: HTTP ${gqlRes.status} for`, Object.values(variables));
@@ -102,28 +109,31 @@ async function searchGroup(group, attempt) {
     console.error('Hardcover rating lookup error:', JSON.stringify(data.errors || data), 'for', Object.values(variables));
     return null;
   }
-  return group.map((b, i) => rowsFrom(data.data[`s${i}`] && data.data[`s${i}`].results));
+  return texts.map((text, i) => rowsFrom(data.data[`s${i}`] && data.data[`s${i}`].results));
+}
+
+/** Hardcover turns requests away when several arrive at once (about ten in
+ *  a burst), so a failed one gets a second go after a short wait. */
+async function searchGroup(texts) {
+  return (await searchOnce(texts)) || (await pause(1200), searchOnce(texts));
 }
 
 /** Looks one group (<= 5 books) up; returns aligned results, with `undefined`
  *  for a book whose request failed. */
 async function queryGroup(group) {
   const out = group.map(() => undefined);
+  const texts = group.map(searchTexts);
   let todo = group.map((b, i) => i);
-  for (let attempt = 0; attempt < 2 && todo.length; attempt++) {
-    const rows = await searchGroup(todo.map((i) => group[i]), attempt);
+  for (let attempt = 0; todo.length; attempt++) {
+    const rows = await searchGroup(todo.map((i) => texts[i][attempt]));
     if (!rows) break; // whatever is still unanswered stays undefined
-    const unmatched = [];
+    const again = [];
     todo.forEach((i, j) => {
-      out[i] = pickMatches([group[i]], rows[j])[0];
-      // Nothing found with the author in the search: worth one more go
-      // without, unless that would be the very same search.
-      if (!out[i] && attempt === 0 && searchText(group[i], 1) !== searchText(group[i], 0)) {
-        out[i] = undefined;
-        unmatched.push(i);
-      }
+      const match = pickMatches([group[i]], rows[j])[0];
+      if (match || attempt + 1 >= texts[i].length) out[i] = match;
+      else again.push(i);
     });
-    todo = unmatched;
+    todo = again;
   }
   return out;
 }
@@ -139,7 +149,7 @@ async function queryHardcover(books) {
 }
 
 function cacheKey(b) {
-  return `hc:r:v3:${norm(b.title)}|${lastName(b.author)}`;
+  return `hc:r:v4:${norm(b.title)}|${lastName(b.author)}`;
 }
 
 async function lookupBatch(books) {

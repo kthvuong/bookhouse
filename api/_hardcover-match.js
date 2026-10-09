@@ -36,10 +36,11 @@ function pickMatches(books, rows) {
   // Rows are indexed by their full title and by the part before a colon, so
   // "Atomic Habits: An Easy & Proven Way…" is found for a plain "Atomic Habits".
   const byTitle = new Map();
-  const add = (key, row) => {
+  const byOtherTitle = new Map();
+  const add = (key, row, map = byTitle) => {
     if (!key) return;
-    if (!byTitle.has(key)) byTitle.set(key, new Set());
-    byTitle.get(key).add(row);
+    if (!map.has(key)) map.set(key, new Set());
+    map.get(key).add(row);
   };
   for (const row of rows || []) {
     const full = String(row.title || '');
@@ -49,8 +50,9 @@ function pickMatches(books, rows) {
     // "The Hobbit, or There and Back Again"
     const alt = full.search(/,\s+or\s/i);
     if (alt > 0) add(norm(full.slice(0, alt)), row);
-    // "Harry Potter and the Sorcerer's Stone", filed under the Philosopher's
-    for (const other of row.alternative_titles || []) add(norm(other), row);
+    // "Harry Potter and the Sorcerer's Stone", filed under the Philosopher's.
+    // Kept apart: these are only a fallback (see below).
+    for (const other of row.alternative_titles || []) add(norm(other), row, byOtherTitle);
   }
 
   return books.map((book) => {
@@ -72,6 +74,21 @@ function pickMatches(books, rows) {
         const rating = Number(row.rating);
         if (!(rating > 0)) continue;
         if (!best || (row.users_count || 0) > (best.users_count || 0)) best = row;
+      }
+    }
+    // An alternative title only counts when no row has the title itself,
+    // and never for a row whose own title merely contains the one asked for:
+    // "Sandworms of Dune" lists plain "Dune" among its alternatives.
+    if (!best) {
+      for (const variant of variants) {
+        const want = norm(variant);
+        for (const row of byOtherTitle.get(want) || []) {
+          if (` ${norm(row.title)} `.includes(` ${want} `)) continue;
+          const credited = (row.contributions || []).map((c) => lastName(c && c.author && c.author.name)).filter(Boolean);
+          if (wantLast && credited.length && !credited.includes(wantLast)) continue;
+          if (!(Number(row.rating) > 0)) continue;
+          if (!best || (row.users_count || 0) > (best.users_count || 0)) best = row;
+        }
       }
     }
     if (!best) return null;
