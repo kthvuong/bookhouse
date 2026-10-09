@@ -90,5 +90,41 @@ const Sync = (() => {
     recordSyncedAt(updatedAt);
   }
 
-  return { isConfigured, token, setToken, getLastSyncedAt, recordSyncedAt, fetchRemote, pushSnapshot, syncNow };
+  // ---- linking a device without typing the token (api/link.js) ----
+
+  async function linkRequest(body, headers = {}) {
+    const res = await fetch('/api/link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Linking failed (${res.status})`);
+    return data;
+  }
+
+  /** On a device that already syncs: a six-digit code another device can
+   *  hand in for the token. Returns { code, expiresIn } (seconds). */
+  function createLinkCode() {
+    return linkRequest({ action: 'create' }, { Authorization: `Bearer ${token()}` });
+  }
+
+  /** On the new device: trades the code for the token, saves it, and brings
+   *  the synced library down. Pull only: a device that has just been linked
+   *  must never push its own (probably empty) library over the real one. */
+  async function linkWithCode(code) {
+    const { token: received } = await linkRequest({ action: 'redeem', code });
+    if (!received) throw new Error('Linking failed. Try again.');
+    setToken(received);
+    const remote = await fetchRemote();
+    if (remote) {
+      await Storage.importAll(remote.data, { replace: true });
+      recordSyncedAt(remote.updatedAt);
+    }
+  }
+
+  return {
+    isConfigured, token, setToken, getLastSyncedAt, recordSyncedAt, fetchRemote, pushSnapshot, syncNow,
+    createLinkCode, linkWithCode,
+  };
 })();

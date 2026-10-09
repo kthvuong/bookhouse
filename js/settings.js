@@ -109,7 +109,9 @@
   function refreshSyncHint() {
     syncHint.textContent = Sync.isConfigured()
       ? formatSyncedAt()
-      : 'No sync token set — this device only has its own local library.';
+      : 'Not linked — this device only has its own local library.';
+    document.getElementById('link-linked').hidden = !Sync.isConfigured();
+    document.getElementById('link-unlinked').hidden = Sync.isConfigured();
   }
   syncTokenInput.value = Sync.token();
   refreshSyncHint();
@@ -134,6 +136,78 @@
     syncNowBtn.textContent = 'Sync Now';
     refreshSyncHint();
   });
+
+  // ---- linking devices: this one shows a code, the other hands it in ----
+  const linkPanel = document.getElementById('link-panel');
+  const linkBtn = document.getElementById('link-device-btn');
+  let linkExpiryTimer = null;
+
+  function closeLinkPanel() {
+    clearTimeout(linkExpiryTimer);
+    linkPanel.hidden = true;
+    linkBtn.textContent = 'Link Another Device';
+  }
+
+  linkBtn.addEventListener('click', async () => {
+    if (!linkPanel.hidden) { closeLinkPanel(); return; }
+    linkBtn.disabled = true;
+    try {
+      const { code, expiresIn } = await Sync.createLinkCode();
+      // After the #, so the code is never sent to a server as part of the address.
+      const url = new URL(`settings.html#link=${code}`, window.location.href).href;
+      document.getElementById('link-qr').innerHTML = QR.svg(url);
+      document.getElementById('link-code').textContent = `${code.slice(0, 3)} ${code.slice(3)}`;
+      const until = new Date(Date.now() + expiresIn * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      document.getElementById('link-expiry').textContent = `Works once, until ${until}.`;
+      linkPanel.hidden = false;
+      linkBtn.textContent = 'Hide Code';
+      clearTimeout(linkExpiryTimer);
+      linkExpiryTimer = setTimeout(closeLinkPanel, expiresIn * 1000);
+    } catch (e) {
+      toast(e.message || 'Could not make a link code');
+    }
+    linkBtn.disabled = false;
+  });
+
+  let linking = false;
+  async function linkThisDevice(code, input) {
+    if (linking) return;
+    linking = true;
+    try {
+      const mine = (await Storage.Books.getAll()).length;
+      if (mine && !confirm(`This device has ${mine} ${mine === 1 ? 'book' : 'books'} of its own. Linking replaces them with your synced library. Go ahead?`)) {
+        if (input) input.clear();
+        return;
+      }
+      syncHint.textContent = 'Linking…';
+      await Sync.linkWithCode(code);
+      toast('This device is linked');
+    } catch (e) {
+      if (Sync.isConfigured()) {
+        toast('Linked, but the library could not be fetched yet');
+      } else {
+        toast(e.message || 'Linking failed');
+        if (input) { input.shake(); input.clear(); }
+      }
+    } finally {
+      linking = false;
+      syncTokenInput.value = Sync.token();
+      refreshSyncHint();
+    }
+  }
+
+  const linkCodeInput = mountPinInput(document.getElementById('link-code-row'), {
+    length: 6,
+    onComplete: (value) => linkThisDevice(value, linkCodeInput),
+  });
+
+  // Arriving from a scanned QR code: settings.html#link=123456
+  const scanned = /^#link=(\d{6})$/.exec(window.location.hash);
+  if (scanned) {
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    if (Sync.isConfigured()) toast('This device is already linked');
+    else linkThisDevice(scanned[1], null);
+  }
 
   // ---- theme ----
   const themeBtn = document.getElementById('settings-theme-toggle');

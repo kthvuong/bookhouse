@@ -11,19 +11,19 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>Settings</title>
-<script src="js/config.js?v=60"></script>
-<script src="js/theme-init.js?v=60"></script>
-<script src="js/auth-init.js?v=60"></script>
+<script src="js/config.js?v=61"></script>
+<script src="js/theme-init.js?v=61"></script>
+<script src="js/auth-init.js?v=61"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500..700&family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..700,0..100,0..1;1,9..144,300..700,0..100,0..1&family=Nunito:ital,wght@0,400..800;1,400..800&display=swap">
-<link rel="stylesheet" href="css/base.css?v=60">
-<link rel="stylesheet" href="css/layout.css?v=60">
-<link rel="stylesheet" href="css/components.css?v=60">
-<link rel="stylesheet" href="css/settings.css?v=60">
+<link rel="stylesheet" href="css/base.css?v=61">
+<link rel="stylesheet" href="css/layout.css?v=61">
+<link rel="stylesheet" href="css/components.css?v=61">
+<link rel="stylesheet" href="css/settings.css?v=61">
 </head>
 <body>
-<script src="js/auth-gate.js?v=60"></script>
+<script src="js/auth-gate.js?v=61"></script>
 <div id="header-root"></div>
 
 <main class="page-shell narrow">
@@ -89,15 +89,40 @@
 
   <section class="settings-section">
     <h2>Sync</h2>
-    <p class="desc">Your library lives in this browser by default, so a different device starts empty. Paste the sync token below (once per device) to keep everything — books, ratings, progress, goals — the same everywhere. This is whole-library sync: whichever device syncs most recently wins, so it isn't built for editing the same book on two devices at once.</p>
-    <div class="form-row">
-      <div class="field" style="flex:1;min-width:220px;"><label>Sync token</label><input class="input" id="sync-token-input" type="text" placeholder="Paste your sync token here" autocomplete="off"></div>
-      <div class="field" style="align-self:flex-end;"><button class="btn btn-primary" id="save-sync-token-btn">Save Token</button></div>
+    <p class="desc">Your library lives in this browser by default, so a different device starts empty. Link each device once to keep everything — books, ratings, progress, goals — the same everywhere. This is whole-library sync: whichever device syncs most recently wins, so it isn't built for editing the same book on two devices at once.</p>
+
+    <div id="link-unlinked" hidden>
+      <div class="field">
+        <label>Link this device</label>
+        <div class="pin-input-row link-code-row" id="link-code-row"></div>
+      </div>
+      <p class="text-muted link-help">On a device that already syncs, open Settings, tap "Link Another Device" and type the code it shows here. On a phone you can scan its QR code with the camera instead.</p>
     </div>
-    <div class="settings-actions" style="margin-top:14px;">
-      <button class="btn" id="sync-now-btn">Sync Now</button>
+
+    <div id="link-linked" hidden>
+      <div class="settings-actions">
+        <button class="btn btn-primary" id="link-device-btn">Link Another Device</button>
+        <button class="btn" id="sync-now-btn">Sync Now</button>
+      </div>
+      <div class="link-panel" id="link-panel" hidden>
+        <div class="link-qr" id="link-qr"></div>
+        <div class="link-panel-text">
+          <p>Scan this with the other device's camera.</p>
+          <p>Or, for the Bookhouse app on a phone's home screen, open its Settings and type this code:</p>
+          <p class="link-code serif" id="link-code"></p>
+          <p class="text-muted" id="link-expiry"></p>
+        </div>
+      </div>
     </div>
     <p class="text-muted" id="sync-hint" style="font-size:12.5px;margin-top:8px;"></p>
+
+    <details style="margin-top:14px;">
+      <summary style="cursor:pointer;font-size:13px;color:var(--text-secondary);">Use the sync token instead</summary>
+      <div class="form-row" style="margin-top:12px;">
+        <div class="field" style="flex:1;min-width:220px;"><label>Sync token</label><input class="input" id="sync-token-input" type="text" placeholder="Paste your sync token here" autocomplete="off"></div>
+        <div class="field" style="align-self:flex-end;"><button class="btn btn-primary" id="save-sync-token-btn">Save Token</button></div>
+      </div>
+    </details>
   </section>
 
   <section class="settings-section">
@@ -123,15 +148,16 @@
   </section>
 </main>
 
-<script src="js/storage.js?v=60"></script>
-<script src="js/sync.js?v=60"></script>
-<script src="js/reviews.js?v=60"></script>
-<script src="js/books-api.js?v=60"></script>
-<script src="js/utils.js?v=60"></script>
-<script src="js/sharper-covers.js?v=60"></script>
-<script src="js/nav.js?v=60"></script>
-<script src="js/add-book.js?v=60"></script>
-<script src="js/book-preview.js?v=60"></script>
-<script src="js/settings.js?v=60"></script>
+<script src="js/storage.js?v=61"></script>
+<script src="js/sync.js?v=61"></script>
+<script src="js/qr.js?v=61"></script>
+<script src="js/reviews.js?v=61"></script>
+<script src="js/books-api.js?v=61"></script>
+<script src="js/utils.js?v=61"></script>
+<script src="js/sharper-covers.js?v=61"></script>
+<script src="js/nav.js?v=61"></script>
+<script src="js/add-book.js?v=61"></script>
+<script src="js/book-preview.js?v=61"></script>
+<script src="js/settings.js?v=61"></script>
 </body>
 </html>

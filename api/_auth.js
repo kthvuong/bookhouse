@@ -61,4 +61,4 @@ async function authorize(req, res) {
   return false;
 }
 
-module.exports = { authorize };
+module.exports = { authorize, clientAddress };

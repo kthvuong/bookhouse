@@ -17,3 +17,19 @@
 .settings-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 
 .danger-note { font-size: 12.5px; color: var(--text-muted); margin-top: 8px; }
+
+/* ---- linking devices ---- */
+.link-code-row { justify-content: flex-start; flex-wrap: wrap; }
+.link-help { font-size: 12.5px; margin-top: 10px; max-width: 60ch; }
+.link-panel {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-5);
+  margin-top: 16px; padding: var(--space-5);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  max-width: 560px;
+}
+.link-qr { width: 176px; flex: none; border-radius: 12px; overflow: hidden; background: #fff; }
+.link-qr svg { display: block; width: 100%; height: auto; }
+.link-panel-text { flex: 1; min-width: 200px; font-size: 13.5px; color: var(--text-secondary); }
+.link-panel-text p + p { margin-top: 8px; }
+.link-panel-text .link-code { font-size: 30px; font-weight: 600; letter-spacing: 0.08em; color: var(--text-primary); }
+.link-panel-text #link-expiry { font-size: 12.5px; }
