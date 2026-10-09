@@ -36,8 +36,13 @@ const MAX_BATCH = 24;
 // books table by title needed a pattern match (_ilike), which Hardcover's
 // API no longer accepts. Hardcover allows at most 5 top-level queries per
 // request, so each request carries up to 5 aliased searches, one per book.
+// Every search counts against Hardcover's limit (about ten in a burst, sixty
+// a minute; checked live, a page of 24 sent at once had 20 turned away), so
+// the requests go one after another, and when Hardcover starts refusing, the
+// books still waiting are left for the next visit rather than hammered at.
 const PER_REQUEST = 5;
 const PER_LOOKUP = 10;
+const TIME_BUDGET = 7000; // ms spent asking Hardcover before giving the page what there is
 
 function searchQuery(count) {
   const vars = Array.from({ length: count }, (_, i) => `$q${i}: String!`).join(', ');
@@ -112,19 +117,18 @@ async function searchOnce(texts) {
   return texts.map((text, i) => rowsFrom(data.data[`s${i}`] && data.data[`s${i}`].results));
 }
 
-/** Hardcover turns requests away when several arrive at once (about ten in
- *  a burst), so a failed one gets a second go after a short wait. */
+/** A request Hardcover turns away gets a second go after a short wait. */
 async function searchGroup(texts) {
-  return (await searchOnce(texts)) || (await pause(1200), searchOnce(texts));
+  return (await searchOnce(texts)) || (await pause(1500), searchOnce(texts));
 }
 
 /** Looks one group (<= 5 books) up; returns aligned results, with `undefined`
  *  for a book whose request failed. */
-async function queryGroup(group) {
+async function queryGroup(group, deadline) {
   const out = group.map(() => undefined);
   const texts = group.map(searchTexts);
   let todo = group.map((b, i) => i);
-  for (let attempt = 0; todo.length; attempt++) {
+  for (let attempt = 0; todo.length && Date.now() < deadline; attempt++) {
     const rows = await searchGroup(todo.map((i) => texts[i][attempt]));
     if (!rows) break; // whatever is still unanswered stays undefined
     const again = [];
@@ -135,7 +139,7 @@ async function queryGroup(group) {
     });
     todo = again;
   }
-  return out;
+  return out; // a book still waiting when time ran out stays undefined
 }
 
 /** Returns an array aligned to `books` of { rating, ratingsCount, hardcoverUrl, description } | null,
@@ -144,12 +148,19 @@ async function queryGroup(group) {
 async function queryHardcover(books) {
   const groups = [];
   for (let i = 0; i < books.length; i += PER_REQUEST) groups.push(books.slice(i, i + PER_REQUEST));
-  const settled = await Promise.all(groups.map(queryGroup));
+  const deadline = Date.now() + TIME_BUDGET;
+  const settled = [];
+  let refused = false;
+  for (const group of groups) {
+    const out = refused || Date.now() >= deadline ? group.map(() => undefined) : await queryGroup(group, deadline);
+    if (out.includes(undefined)) refused = true;
+    settled.push(out);
+  }
   return settled.flat();
 }
 
 function cacheKey(b) {
-  return `hc:r:v4:${norm(b.title)}|${lastName(b.author)}`;
+  return `hc:r:v5:${norm(b.title)}|${lastName(b.author)}`;
 }
 
 async function lookupBatch(books) {

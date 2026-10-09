@@ -83,7 +83,10 @@ const Reviews = (() => {
           const r = data.results[j];
           const value = r && typeof r.rating === 'number' ? r : null;
           out[i] = value;
-          cache.set(batchKey(books[i]), value);
+          // With a reason, the server couldn't get through them all (Hardcover
+          // limits how fast it can ask): an empty answer isn't a "no", so it's
+          // asked again next time instead of remembered.
+          if (value || !data.reason) cache.set(batchKey(books[i]), value);
         });
       } catch (e) {
         console.warn('Hardcover batch lookup failed:', e.message);

@@ -31,7 +31,9 @@ function titleVariants(title) {
  *  rows: [{ title, alternative_titles?, slug, rating, ratings_count, users_count, contributions? }]
  *  Returns an array aligned to `books`: { rating, ratingsCount, hardcoverUrl } | null.
  *  A book with an author is only matched to a row whose credited authors include
- *  that author's last name — a wrong-book rating is worse than none. */
+ *  that author's last name — a wrong-book rating is worse than none. (A row
+ *  with no authors at all doesn't pass either: that let a study guide named
+ *  after the book stand in for it.) */
 function pickMatches(books, rows) {
   // Rows are indexed by their full title and by the part before a colon, so
   // "Atomic Habits: An Easy & Proven Way…" is found for a plain "Atomic Habits".
@@ -70,7 +72,7 @@ function pickMatches(books, rows) {
           && norm(row.title) !== norm(variant);
         if (rowKeyIsPrefix && wantFull.includes(':')) continue;
         const credited = (row.contributions || []).map((c) => lastName(c && c.author && c.author.name)).filter(Boolean);
-        if (wantLast && credited.length && !credited.includes(wantLast)) continue;
+        if (wantLast && !credited.includes(wantLast)) continue;
         const rating = Number(row.rating);
         if (!(rating > 0)) continue;
         if (!best || (row.users_count || 0) > (best.users_count || 0)) best = row;
@@ -85,7 +87,7 @@ function pickMatches(books, rows) {
         for (const row of byOtherTitle.get(want) || []) {
           if (` ${norm(row.title)} `.includes(` ${want} `)) continue;
           const credited = (row.contributions || []).map((c) => lastName(c && c.author && c.author.name)).filter(Boolean);
-          if (wantLast && credited.length && !credited.includes(wantLast)) continue;
+          if (wantLast && !credited.includes(wantLast)) continue;
           if (!(Number(row.rating) > 0)) continue;
           if (!best || (row.users_count || 0) > (best.users_count || 0)) best = row;
         }
