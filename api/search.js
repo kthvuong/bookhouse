@@ -110,12 +110,13 @@ function cleanGenres(genres) {
 
 /** Originals run to several hundred KB each, far too heavy for a list of
  *  thumbnails on a phone — so alongside the original this returns the
- *  small resized copy Hardcover's own site uses in its lists. */
-function coverUrls(image) {
+ *  small resized copy Hardcover's own site uses in its lists (or a wider
+ *  one, for Explore's cards). */
+function coverUrls(image, width = 100) {
   const url = image && (typeof image === 'string' ? image : image.url);
   if (typeof url !== 'string' || !url.startsWith('https://')) return { cover: '', thumb: '' };
   const thumb = url.startsWith('https://assets.hardcover.app/')
-    ? `https://production-img.hardcover.app/enlarge?height=150&type=webp&url=${encodeURIComponent(url)}&width=100`
+    ? `https://production-img.hardcover.app/enlarge?height=${width * 1.5}&type=webp&url=${encodeURIComponent(url)}&width=${width}`
     : url;
   return { cover: url, thumb };
 }

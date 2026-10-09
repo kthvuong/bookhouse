@@ -29,6 +29,9 @@ const NYT_TTL = 12 * 3600; // the lists change once a week
 const TRENDING_DAYS = 30;
 const FRESH_DAYS = 150;
 const LIST_SIZE = 40;
+// Explore's cards are 150 wide, on screens with two or three pixels to the
+// point; the 100-wide list thumbnail looked blurry there. About 20 KB each.
+const CARD_WIDTH = 320;
 
 const redis = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
   ? new Redis({ url: process.env.KV_REST_API_URL, token: process.env.KV_REST_API_TOKEN })
@@ -74,7 +77,7 @@ function mapBook(b) {
     pages: Number(b.pages) || null,
     isbn13: '',
     isbn10: '',
-    ...coverUrls(b.cached_image),
+    ...coverUrls(b.cached_image, CARD_WIDTH),
     description: String(b.description || '').replace(/\r\n?/g, '\n').trim(),
     genres: cleanGenres(genres),
     rating: Number(b.rating) > 0 ? Number(b.rating) : null,
@@ -208,8 +211,8 @@ module.exports = async function handler(req, res) {
   const noToken = { value: [], reason: 'HARDCOVER_API_TOKEN not configured' };
   const hasHardcover = !!process.env.HARDCOVER_API_TOKEN;
   const [trending, fresh, nyt] = await Promise.all([
-    hasHardcover ? cached('hc:x:v1:trending', HARDCOVER_TTL, [], hardcoverTrending) : noToken,
-    hasHardcover ? cached('hc:x:v1:fresh', HARDCOVER_TTL, [], hardcoverFresh) : noToken,
+    hasHardcover ? cached('hc:x:v2:trending', HARDCOVER_TTL, [], hardcoverTrending) : noToken,
+    hasHardcover ? cached('hc:x:v2:fresh', HARDCOVER_TTL, [], hardcoverFresh) : noToken,
     process.env.NYT_API_KEY
       ? cached('nyt:x:v1:lists', NYT_TTL, [], async () => (await Promise.all(NYT_LISTS.map(nytList))).filter((l) => l.books.length))
       : { value: [], reason: 'NYT_API_KEY not configured' },
