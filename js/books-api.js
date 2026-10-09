@@ -3,8 +3,8 @@
 
    Search merges Hardcover (via api/search.js) with Google Books,
    falling back to Open Library when Google's quota runs dry (see
-   mergeSearchResults for who leads when); Explore's rails and trending
-   come from Google / Open Library. Each provider exposes the same small
+   mergeSearchResults for who leads when); Explore's rails come from
+   Hardcover and the New York Times (currentLists) and Google / Open Library. Each provider exposes the same small
    interface, so no UI code has to care which one a result came from:
 
      provider.search(query)      -> [{ externalId, title, authors, ... }]
@@ -316,6 +316,37 @@ const BooksAPI = (() => {
     }
   }
 
+  /** What's current, from api/explore.js: Hardcover's trending and newly
+   *  released books and the New York Times bestseller lists. Empty lists
+   *  on a device that isn't linked, or if it can't be reached. */
+  let currentListsPromise = null;
+  function currentLists() {
+    const nothing = { trending: [], fresh: [], nyt: [] };
+    if (typeof Sync === 'undefined' || !Sync.isConfigured()) return Promise.resolve(nothing);
+    if (currentListsPromise) return currentListsPromise;
+    currentListsPromise = (async () => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 8000);
+      try {
+        const res = await fetch('/api/explore', { headers: { Authorization: `Bearer ${Sync.token()}` }, signal: ctrl.signal });
+        if (!res.ok) throw new Error(`Explore lists failed (${res.status})`);
+        const data = await res.json();
+        return {
+          trending: (data.trending || []).map(mapHardcoverResult),
+          fresh: (data.fresh || []).map(mapHardcoverResult),
+          // Not Hardcover's books, so no Hardcover rating comes with them.
+          nyt: (data.nyt || []).map((list) => ({ name: String(list.name || ''), books: (list.books || []).map((b) => ({ ...mapHardcoverResult(b), source: 'nyt' })) })),
+        };
+      } catch (e) {
+        currentListsPromise = null; // try again on the next visit to Explore
+        return nothing;
+      } finally {
+        clearTimeout(timer);
+      }
+    })();
+    return currentListsPromise;
+  }
+
   /* ---- Cover images ----
      A page can show an image from any host, but it can only read one — to
      keep a copy on this device, or to sample its colours — if the host
@@ -482,6 +513,7 @@ const BooksAPI = (() => {
       : withFallback('search', [query, opts])),
     searchBySubject: (subject, opts) => withFallback('searchBySubject', [subject, opts]),
     trending: (opts) => withFallback('trending', [opts]),
+    currentLists,
     /** Routed by where the result came from, so a result from the Open
      *  Library fallback (or Hardcover) doesn't get looked up in Google. */
     getDetails: (externalId) => {

@@ -186,7 +186,7 @@ function dedupe(list) {
   });
 }
 
-module.exports = async function handler(req, res) {
+async function handler(req, res) {
   if (!(await authorize(req, res))) return;
   if (req.method !== 'GET') {
     res.status(405).json({ error: 'Method not allowed' });
@@ -249,3 +249,7 @@ module.exports = async function handler(req, res) {
     res.status(200).json({ results: [], reason: 'Could not reach Hardcover' });
   }
 };
+
+module.exports = handler;
+// api/explore.js tidies Hardcover's books the same way.
+module.exports.shared = { clean, strings, cleanGenres, coverUrls };

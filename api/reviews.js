@@ -172,7 +172,7 @@ async function queryHardcover(books) {
 }
 
 function cacheKey(b) {
-  return `hc:r:v5:${norm(b.title)}|${lastName(b.author)}`;
+  return `hc:r:v6:${norm(b.title)}|${lastName(b.author)}`;
 }
 
 async function lookupBatch(books) {

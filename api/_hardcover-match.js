@@ -78,19 +78,20 @@ function pickMatches(books, rows) {
         if (!best || (row.users_count || 0) > (best.users_count || 0)) best = row;
       }
     }
-    // An alternative title only counts when no row has the title itself,
-    // and never for a row whose own title merely contains the one asked for:
-    // "Sandworms of Dune" lists plain "Dune" among its alternatives.
-    if (!best) {
-      for (const variant of variants) {
-        const want = norm(variant);
-        for (const row of byOtherTitle.get(want) || []) {
-          if (` ${norm(row.title)} `.includes(` ${want} `)) continue;
-          const credited = (row.contributions || []).map((c) => lastName(c && c.author && c.author.name)).filter(Boolean);
-          if (wantLast && !credited.includes(wantLast)) continue;
-          if (!(Number(row.rating) > 0)) continue;
-          if (!best || (row.users_count || 0) > (best.users_count || 0)) best = row;
-        }
+    // A row that has the title as an alternative competes on readers with
+    // the rows that have it outright: the SparkNotes for "Harry Potter and
+    // the Sorcerer's Stone" has that exact title, credits Rowling, and has
+    // one rating, while the book itself is filed under the Philosopher's.
+    // Never, though, a row whose own title merely contains the one asked
+    // for: "Sandworms of Dune" lists plain "Dune" among its alternatives.
+    for (const variant of variants) {
+      const want = norm(variant);
+      for (const row of byOtherTitle.get(want) || []) {
+        if (` ${norm(row.title)} `.includes(` ${want} `)) continue;
+        const credited = (row.contributions || []).map((c) => lastName(c && c.author && c.author.name)).filter(Boolean);
+        if (wantLast && !credited.includes(wantLast)) continue;
+        if (!(Number(row.rating) > 0)) continue;
+        if (!best || (row.users_count || 0) > (best.users_count || 0)) best = row;
       }
     }
     if (!best) return null;

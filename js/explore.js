@@ -2,8 +2,10 @@
    explore.js — book discovery: trending, new releases, and
    personalized recommendations.
 
-   No ML, no embeddings, no AI calls: trending/new-release sections
-   come straight from Open Library / Google Books, and the two
+   No ML, no embeddings, no AI calls: trending, new releases and
+   bestsellers come from Hardcover and the New York Times (through
+   api/explore.js), with Open Library / Google Books behind them and
+   for the genre sections, and the two
    personalized sections use simple, explainable scoring over your
    own reading data (favourite genres, authors you rate highly,
    books you loved, DNFs as a weak negative). Anything already in
@@ -129,6 +131,12 @@
       const slot = document.createElement('div');
       slot.className = 'community-rating loading';
       card.appendChild(slot);
+      // A book that came from Hardcover brought its Hardcover rating along.
+      if (item.source === 'hardcover' && typeof Reviews !== 'undefined') {
+        slot.classList.remove('loading');
+        if (item.averageRating) slot.innerHTML = Reviews.compactHTML(item.averageRating, 'Hardcover');
+        return;
+      }
       pending.push({ item, slot });
     });
     if (!pending.length || typeof Reviews === 'undefined') {
@@ -335,14 +343,23 @@
     const genreLabel = GENRE_LABEL[selectedGenre];
     const subject = PRIMARY_SUBJECT[selectedGenre];
 
-    const [trendingRaw, trendingGenreRaw, newRaw] = await Promise.all([
+    const [current, trendingRaw, trendingGenreRaw, newRaw] = await Promise.all([
+      BooksAPI.currentLists(),
       BooksAPI.trending({ limit: 100 }).catch(() => []),
       genreSelected ? BooksAPI.searchBySubject(subject, { limit: RAIL_POOL, sort: 'rating' }).catch(() => []) : Promise.resolve([]),
       genreSelected ? BooksAPI.searchBySubject(subject, { limit: RAIL_POOL, sort: 'new' }).catch(() => []) : Promise.resolve([]),
     ]);
 
     const sections = [];
-    sections.push(sectionHTML('Trending Now', 'What readers everywhere are picking up right now.', await railHTML(filterCandidates(trendingRaw, RAIL_POOL))));
+    // Hardcover's readers lean new and popular; Open Library's weekly list
+    // (a lending library's: classics, school reading) is the stand-in when
+    // Hardcover has nothing to give.
+    const trendingNow = current.trending.length ? current.trending : trendingRaw;
+    sections.push(sectionHTML('Trending Now', 'What readers everywhere are picking up right now.', await railHTML(filterCandidates(trendingNow, RAIL_POOL))));
+    sections.push(sectionHTML('New & Popular', 'Out in the last few months and already on a lot of shelves.', await railHTML(filterCandidates(current.fresh, RAIL_POOL))));
+    for (const list of current.nyt) {
+      sections.push(sectionHTML(`Bestsellers: ${list.name}`, 'This week\'s New York Times list.', await railHTML(filterCandidates(list.books, RAIL_POOL))));
+    }
     if (genreSelected) {
       sections.push(sectionHTML(`Trending in ${genreLabel}`, `Popular right now in ${genreLabel.toLowerCase()}.`, await railHTML(filterCandidates(trendingGenreRaw, RAIL_POOL), makeSubjectFetcher(subject, 'rating'))));
       sections.push(sectionHTML('New & Noteworthy', `Recently released in ${genreLabel.toLowerCase()}.`, await railHTML(filterCandidates(newRaw, RAIL_POOL), makeSubjectFetcher(subject, 'new'))));
