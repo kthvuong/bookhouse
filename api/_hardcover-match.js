@@ -28,7 +28,7 @@ function titleVariants(title) {
 }
 
 /** For each requested { title, author }, pick the best matching Hardcover row.
- *  rows: [{ title, slug, rating, ratings_count, users_count, contributions? }]
+ *  rows: [{ title, alternative_titles?, slug, rating, ratings_count, users_count, contributions? }]
  *  Returns an array aligned to `books`: { rating, ratingsCount, hardcoverUrl } | null.
  *  A book with an author is only matched to a row whose credited authors include
  *  that author's last name — a wrong-book rating is worse than none. */
@@ -49,6 +49,8 @@ function pickMatches(books, rows) {
     // "The Hobbit, or There and Back Again"
     const alt = full.search(/,\s+or\s/i);
     if (alt > 0) add(norm(full.slice(0, alt)), row);
+    // "Harry Potter and the Sorcerer's Stone", filed under the Philosopher's
+    for (const other of row.alternative_titles || []) add(norm(other), row);
   }
 
   return books.map((book) => {

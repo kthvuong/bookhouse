@@ -1,7 +1,7 @@
 /* ============================================================
    api/reviews.js — Vercel serverless function.
 
-   Proxies a book lookup to Hardcover's GraphQL API. Hardcover's own docs
+   Proxies a book lookup to Hardcover's GraphQL API (through its search). Hardcover's own docs
    explicitly forbid calling their API from a browser (the token would be
    exposed) and forbid a third party from redistributing other users'
    review/rating data — this only ever returns the book's own aggregate
@@ -31,53 +31,101 @@ const TTL_HIT = 7 * 24 * 3600;
 const TTL_MISS = 24 * 3600;
 const MAX_BATCH = 24;
 
-// Hardcover allows at most 5 top-level queries per request, so each request
-// carries up to 5 aliased lookups (one per book). Every lookup is a title
-// prefix search (subtitled editions like "Atomic Habits: An Easy & Proven Way…"
-// wouldn't match an exact title), best-known first. Author names are used to
-// avoid matching a different book with the same title; if the API rejects the
-// nested selection (query depth limits), retry title-only.
+// Each book is found through Hardcover's search (the same one api/search.js
+// uses) and its rating read off the search result. Looking books up in the
+// books table by title needed a pattern match (_ilike), which Hardcover's
+// API no longer accepts. Hardcover allows at most 5 top-level queries per
+// request, so each request carries up to 5 aliased searches, one per book.
 const PER_REQUEST = 5;
-const PER_LOOKUP = 15;
+const PER_LOOKUP = 10;
 
-function likeEscape(s) {
-  return String(s).replace(/[%_\\]/g, ' ').trim();
-}
-
-function batchQuery(count, withAuthors) {
-  const vars = Array.from({ length: count }, (_, i) => `$p${i}: String!, $e${i}: [String!]!`).join(', ');
-  const fields = `title slug rating ratings_count users_count description ${withAuthors ? 'contributions(limit: 4) { author { name } }' : ''}`;
+function searchQuery(count) {
+  const vars = Array.from({ length: count }, (_, i) => `$q${i}: String!`).join(', ');
   const lookups = Array.from({ length: count }, (_, i) => `
-      b${i}: books(where: { _or: [{ title: { _ilike: $p${i} } }, { title: { _in: $e${i} } }] },
-        order_by: { users_count: desc }, limit: ${PER_LOOKUP}) { ${fields} }`).join('');
-  return `query Batch(${vars}) {${lookups}\n    }`;
+      s${i}: search(query: $q${i}, query_type: "Book", per_page: ${PER_LOOKUP}, page: 1) { results }`).join('');
+  return `query Ratings(${vars}) {${lookups}\n    }`;
 }
 
-async function runBatchQuery(group, withAuthors) {
+/** Same zero-width clean-up as api/search.js: without it Hardcover's
+ *  "A Court of Silver Flames" never equals the title asked for. */
+function clean(s) {
+  return String(s == null ? '' : s).replace(/[​-‍⁠﻿]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+const strings = (list) => (Array.isArray(list) ? list.filter((x) => typeof x === 'string').map(clean).filter(Boolean) : []);
+
+/** Search results (Typesense's raw response, normally { hits: [{ document }] })
+ *  as the rows pickMatches expects. */
+function rowsFrom(results) {
+  if (!results) return [];
+  const hits = results.hits || (results.results && results.results[0] && results.results[0].hits);
+  if (!Array.isArray(hits)) return [];
+  return hits.map((h) => h.document || h).filter((d) => d && d.title).map((d) => ({
+    title: clean(d.title),
+    alternative_titles: strings(d.alternative_titles),
+    slug: d.slug,
+    rating: d.rating,
+    ratings_count: d.ratings_count,
+    users_count: d.users_count,
+    description: d.description,
+    contributions: strings(d.author_names).map((name) => ({ author: { name } })),
+  }));
+}
+
+/** The first search is the whole title plus the author's last name, which
+ *  finds the right book among others of the same title. The second, for a
+ *  book the first didn't find, is the title alone, cut at a colon: Hardcover
+ *  often files "Atomic Habits: An Easy & Proven Way…" as plain "Atomic
+ *  Habits", and its search wants every word typed to be there. */
+function searchText(book, attempt) {
+  const title = clean(book.title);
+  if (attempt === 0) return `${title} ${lastName(book.author)}`.trim();
+  return titleVariants(title).slice(0, 2).pop();
+}
+
+/** One request for up to 5 books. Returns their rows, aligned, or null if
+ *  Hardcover didn't answer properly (which is written to the function's log). */
+async function searchGroup(group, attempt) {
   const variables = {};
-  group.forEach((b, i) => {
-    const vs = titleVariants(b.title);
-    const head = vs.length > 1 ? vs[1] : vs[0];
-    variables[`p${i}`] = `${likeEscape(head)}%`;
-    variables[`e${i}`] = vs;
-  });
+  group.forEach((b, i) => { variables[`q${i}`] = searchText(b, attempt); });
   const gqlRes = await fetch(HARDCOVER_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.HARDCOVER_API_TOKEN}` },
-    body: JSON.stringify({ query: batchQuery(group.length, withAuthors), variables }),
+    body: JSON.stringify({ query: searchQuery(group.length), variables }),
   });
-  if (!gqlRes.ok) return { failed: true, status: gqlRes.status };
+  if (!gqlRes.ok) {
+    console.error(`Hardcover rating lookup: HTTP ${gqlRes.status} for`, Object.values(variables));
+    return null;
+  }
   const data = await gqlRes.json();
-  if (data.errors) return { failed: true, errors: data.errors };
-  return { data: data.data || {} };
+  if (data.errors || !data.data) {
+    console.error('Hardcover rating lookup error:', JSON.stringify(data.errors || data), 'for', Object.values(variables));
+    return null;
+  }
+  return group.map((b, i) => rowsFrom(data.data[`s${i}`] && data.data[`s${i}`].results));
 }
 
-/** Looks one group (<= 5 books) up; returns aligned results or null on failure. */
+/** Looks one group (<= 5 books) up; returns aligned results, with `undefined`
+ *  for a book whose request failed. */
 async function queryGroup(group) {
-  let out = await runBatchQuery(group, true);
-  if (out.failed && out.errors) out = await runBatchQuery(group, false);
-  if (out.failed) return null;
-  return group.map((b, i) => pickMatches([b], out.data[`b${i}`] || [])[0]);
+  const out = group.map(() => undefined);
+  let todo = group.map((b, i) => i);
+  for (let attempt = 0; attempt < 2 && todo.length; attempt++) {
+    const rows = await searchGroup(todo.map((i) => group[i]), attempt);
+    if (!rows) break; // whatever is still unanswered stays undefined
+    const unmatched = [];
+    todo.forEach((i, j) => {
+      out[i] = pickMatches([group[i]], rows[j])[0];
+      // Nothing found with the author in the search: worth one more go
+      // without, unless that would be the very same search.
+      if (!out[i] && attempt === 0 && searchText(group[i], 1) !== searchText(group[i], 0)) {
+        out[i] = undefined;
+        unmatched.push(i);
+      }
+    });
+    todo = unmatched;
+  }
+  return out;
 }
 
 /** Returns an array aligned to `books` of { rating, ratingsCount, hardcoverUrl, description } | null,
@@ -87,11 +135,11 @@ async function queryHardcover(books) {
   const groups = [];
   for (let i = 0; i < books.length; i += PER_REQUEST) groups.push(books.slice(i, i + PER_REQUEST));
   const settled = await Promise.all(groups.map(queryGroup));
-  return settled.flatMap((r, gi) => r || groups[gi].map(() => undefined));
+  return settled.flat();
 }
 
 function cacheKey(b) {
-  return `hc:r:v2:${norm(b.title)}|${lastName(b.author)}`;
+  return `hc:r:v3:${norm(b.title)}|${lastName(b.author)}`;
 }
 
 async function lookupBatch(books) {
@@ -107,17 +155,18 @@ async function lookupBatch(books) {
     if (c && typeof c === 'object') results[i] = c.miss ? null : c;
     else if (b.title) misses.push(i);
   });
-  if (!misses.length) return results;
+  if (!misses.length) return { results };
 
   const fetched = await queryHardcover(misses.map((i) => books[i]));
   const writes = [];
+  let failed = false;
   misses.forEach((idx, j) => {
-    if (fetched[j] === undefined) return;
+    if (fetched[j] === undefined) { failed = true; return; }
     results[idx] = fetched[j];
     if (redis) writes.push(redis.set(keys[idx], fetched[j] || { miss: true }, { ex: fetched[j] ? TTL_HIT : TTL_MISS }));
   });
   await Promise.allSettled(writes);
-  return results;
+  return failed ? { results, reason: 'Hardcover lookup failed' } : { results };
 }
 
 async function handleBatch(req, res) {
@@ -125,16 +174,16 @@ async function handleBatch(req, res) {
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = null; } }
   const books = body && Array.isArray(body.books) ? body.books.slice(0, MAX_BATCH) : null;
   if (!books) { res.status(400).json({ error: 'Expected { books: [{ title, author }] }' }); return; }
-  const clean = books.map((b) => ({ title: String((b && b.title) || ''), author: String((b && b.author) || '') }));
+  const wanted = books.map((b) => ({ title: String((b && b.title) || ''), author: String((b && b.author) || '') }));
   if (!process.env.HARDCOVER_API_TOKEN) {
-    res.status(200).json({ results: clean.map(() => null), reason: 'HARDCOVER_API_TOKEN not configured' });
+    res.status(200).json({ results: wanted.map(() => null), reason: 'HARDCOVER_API_TOKEN not configured' });
     return;
   }
   try {
-    res.status(200).json({ results: await lookupBatch(clean) });
+    res.status(200).json(await lookupBatch(wanted));
   } catch (e) {
     console.error('Hardcover batch lookup failed:', e);
-    res.status(200).json({ results: clean.map(() => null), reason: 'Could not reach Hardcover' });
+    res.status(200).json({ results: wanted.map(() => null), reason: 'Could not reach Hardcover' });
   }
 }
 
@@ -163,8 +212,8 @@ module.exports = async function handler(req, res) {
     return;
   }
   try {
-    const [match] = await lookupBatch([{ title: String(title), author: String(author || '') }]);
-    res.status(200).json(match || { rating: null });
+    const { results, reason } = await lookupBatch([{ title: String(title), author: String(author || '') }]);
+    res.status(200).json(results[0] || (reason ? { rating: null, reason } : { rating: null }));
   } catch (e) {
     console.error('Hardcover lookup failed:', e);
     res.status(200).json({ rating: null, reason: 'Could not reach Hardcover' });
