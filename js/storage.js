@@ -154,10 +154,11 @@ const Storage = (() => {
 
   // Shared by the once-per-load pull in open() and the catch-up pull on tab
   // refocus below: apply the cloud snapshot only if it's actually newer than
-  // what this device last saw. Guarded against overlapping calls.
+  // what this device last saw. Guarded against overlapping calls. Resolves
+  // true when newer data was brought in.
   let pullInFlight = null;
   function pullIfNewer(db) {
-    if (!syncAvailable()) return Promise.resolve();
+    if (!syncAvailable()) return Promise.resolve(false);
     if (pullInFlight) return pullInFlight;
     pullInFlight = (async () => {
       try {
@@ -166,12 +167,14 @@ const Storage = (() => {
         if (remote && remote.data && (!localWatermark || remote.updatedAt > localWatermark)) {
           await applySnapshotRaw(db, remote.data);
           Sync.recordSyncedAt(remote.updatedAt);
+          return true;
         }
       } catch (e) {
         console.warn('Sync pull skipped:', e.message);
       } finally {
         pullInFlight = null;
       }
+      return false;
     })();
     return pullInFlight;
   }
@@ -226,8 +229,16 @@ const Storage = (() => {
         flushPush({ keepalive: true });
       } else if (syncAvailable()) {
         // Catches up a tab left open in the background while another device
-        // made changes, instead of it showing stale data until next reload.
-        openDB().then(pullIfNewer);
+        // made changes. The page on screen was drawn from the old data, so
+        // it is loaded afresh — a phone's home-screen app is hardly ever
+        // reloaded otherwise, only brought back to the front. Not while
+        // something is being typed or a sheet is open, and not over changes
+        // of this device's own that haven't been sent yet.
+        openDB().then(pullIfNewer).then((changed) => {
+          const el = document.activeElement;
+          const typing = el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
+          if (changed && !pushDirty && !typing && !document.querySelector('.modal-overlay.open')) window.location.reload();
+        });
       }
     });
     // Belt-and-suspenders alongside visibilitychange: some browsers fire
