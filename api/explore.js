@@ -185,6 +185,19 @@ async function cached(key, ttl, empty, make) {
   }
 }
 
+/** At most PER_AUTHOR books by any one author, keeping the order: left
+ *  alone, one series on a run (eight Dungeon Crawler Carl books in the
+ *  first ten, when this was checked) is most of the row. */
+const PER_AUTHOR = 2;
+function varied(books) {
+  const counts = new Map();
+  return books.filter((b) => {
+    const who = String((b.authors && b.authors[0]) || '').toLowerCase();
+    counts.set(who, (counts.get(who) || 0) + 1);
+    return counts.get(who) <= PER_AUTHOR;
+  });
+}
+
 module.exports = async function handler(req, res) {
   if (!(await authorize(req, res))) return;
   if (req.method !== 'GET') {
@@ -204,5 +217,5 @@ module.exports = async function handler(req, res) {
   if (trending.reason) reasons.trending = trending.reason;
   if (fresh.reason) reasons.fresh = fresh.reason;
   if (nyt.reason) reasons.nyt = nyt.reason;
-  res.status(200).json({ trending: trending.value, fresh: fresh.value, nyt: nyt.value, reasons });
+  res.status(200).json({ trending: varied(trending.value), fresh: varied(fresh.value), nyt: nyt.value, reasons });
 };
