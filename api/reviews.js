@@ -33,16 +33,19 @@ const MAX_BATCH = 24;
 
 // Each book is found through Hardcover's search (the same one api/search.js
 // uses) and its rating read off the search result. Looking books up in the
-// books table by title needed a pattern match (_ilike), which Hardcover's
-// API no longer accepts. Hardcover allows at most 5 top-level queries per
-// request, so each request carries up to 5 aliased searches, one per book.
-// Every search counts against Hardcover's limit (about ten in a burst, sixty
-// a minute; checked live, a page of 24 sent at once had 20 turned away), so
-// the requests go one after another, and when Hardcover starts refusing, the
-// books still waiting are left for the next visit rather than hammered at.
+// books table by title needed a pattern match (_ilike), which Hardcover has
+// switched off.
+//
+// Hardcover's limits (docs.hardcover.app, "Rate Limits"): every top-level
+// field in a request costs one token, the bucket holds 10 and refills at one
+// a second. So one search per book, a few to a request, never more than the
+// tokens Hardcover says are left (its RateLimit header); when the bucket is
+// empty the lookups wait for it to refill, and whatever hasn't been asked by
+// the time TIME_BUDGET is up is left for the next visit.
 const PER_REQUEST = 5;
 const PER_LOOKUP = 10;
 const TIME_BUDGET = 7000; // ms spent asking Hardcover before giving the page what there is
+const REFILL_WAIT = 2000; // ms to let the bucket take in a couple of tokens
 
 function searchQuery(count) {
   const vars = Array.from({ length: count }, (_, i) => `$q${i}: String!`).join(', ');
@@ -97,6 +100,16 @@ const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** One request for up to 5 books. Returns their rows, aligned, or null if
  *  Hardcover didn't answer properly (which is written to the function's log). */
+/** Tokens left in the per-minute bucket, from a header like
+ *  `"Free";r=8;t=0, "daily";r=4231;t=51234`; null if it isn't there. */
+function tokensLeft(gqlRes) {
+  const m = /;\s*r=(\d+)/.exec((gqlRes.headers && gqlRes.headers.get('ratelimit')) || '');
+  return m ? Number(m[1]) : null;
+}
+
+/** One request for up to 5 searches. Returns { rows, left }: each search's
+ *  rows, aligned (null if Hardcover didn't answer properly, which is written
+ *  to the function's log), and the tokens left afterwards if known. */
 async function searchOnce(texts) {
   const variables = {};
   texts.forEach((text, i) => { variables[`q${i}`] = text; });
@@ -105,58 +118,57 @@ async function searchOnce(texts) {
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.HARDCOVER_API_TOKEN}` },
     body: JSON.stringify({ query: searchQuery(texts.length), variables }),
   });
+  const left = tokensLeft(gqlRes);
   if (!gqlRes.ok) {
-    console.error(`Hardcover rating lookup: HTTP ${gqlRes.status} for`, Object.values(variables));
-    return null;
+    console.error(`Hardcover rating lookup: HTTP ${gqlRes.status} for`, texts);
+    return { rows: null, left };
   }
   const data = await gqlRes.json();
   if (data.errors || !data.data) {
-    console.error('Hardcover rating lookup error:', JSON.stringify(data.errors || data), 'for', Object.values(variables));
-    return null;
+    console.error('Hardcover rating lookup error:', JSON.stringify(data.errors || data), 'for', texts);
+    return { rows: null, left };
   }
-  return texts.map((text, i) => rowsFrom(data.data[`s${i}`] && data.data[`s${i}`].results));
-}
-
-/** A request Hardcover turns away gets a second go after a short wait. */
-async function searchGroup(texts) {
-  return (await searchOnce(texts)) || (await pause(1500), searchOnce(texts));
-}
-
-/** Looks one group (<= 5 books) up; returns aligned results, with `undefined`
- *  for a book whose request failed. */
-async function queryGroup(group, deadline) {
-  const out = group.map(() => undefined);
-  const texts = group.map(searchTexts);
-  let todo = group.map((b, i) => i);
-  for (let attempt = 0; todo.length && Date.now() < deadline; attempt++) {
-    const rows = await searchGroup(todo.map((i) => texts[i][attempt]));
-    if (!rows) break; // whatever is still unanswered stays undefined
-    const again = [];
-    todo.forEach((i, j) => {
-      const match = pickMatches([group[i]], rows[j])[0];
-      if (match || attempt + 1 >= texts[i].length) out[i] = match;
-      else again.push(i);
-    });
-    todo = again;
-  }
-  return out; // a book still waiting when time ran out stays undefined
+  return { rows: texts.map((text, i) => rowsFrom(data.data[`s${i}`] && data.data[`s${i}`].results)), left };
 }
 
 /** Returns an array aligned to `books` of { rating, ratingsCount, hardcoverUrl, description } | null,
- *  with `undefined` for any book whose request failed (so callers don't cache a
- *  failure as "no match"). */
+ *  with `undefined` for any book that couldn't be asked about or whose request
+ *  failed (so callers don't cache that as "no match"). */
 async function queryHardcover(books) {
-  const groups = [];
-  for (let i = 0; i < books.length; i += PER_REQUEST) groups.push(books.slice(i, i + PER_REQUEST));
+  const out = books.map(() => undefined);
+  const texts = books.map(searchTexts);
+  const queue = books.map((b, i) => ({ i, attempt: 0 }));
   const deadline = Date.now() + TIME_BUDGET;
-  const settled = [];
-  let refused = false;
-  for (const group of groups) {
-    const out = refused || Date.now() >= deadline ? group.map(() => undefined) : await queryGroup(group, deadline);
-    if (out.includes(undefined)) refused = true;
-    settled.push(out);
+  let left = PER_REQUEST; // until Hardcover says otherwise
+  let refusals = 0;
+  while (queue.length && refusals < 2 && Date.now() < deadline) {
+    if (left < 1) {
+      if (Date.now() + REFILL_WAIT >= deadline) break;
+      await pause(REFILL_WAIT);
+      left = Math.floor(REFILL_WAIT / 1000);
+    }
+    const batch = queue.splice(0, Math.min(PER_REQUEST, left));
+    const answer = await searchOnce(batch.map(({ i, attempt }) => texts[i][attempt]));
+    if (!answer.rows) {
+      // Turned away: put them back and let the bucket refill before the one retry.
+      queue.unshift(...batch);
+      refusals++;
+      left = 0;
+      continue;
+    }
+    refusals = 0;
+    left = answer.left == null ? left - batch.length : answer.left;
+    const again = [];
+    batch.forEach(({ i, attempt }, j) => {
+      const match = pickMatches([books[i]], answer.rows[j])[0];
+      if (match || attempt + 1 >= texts[i].length) out[i] = match;
+      else again.push({ i, attempt: attempt + 1 });
+    });
+    // A book's next try goes to the back, so one obscure title doesn't hold
+    // up the tokens for books not yet asked about at all.
+    queue.push(...again);
   }
-  return settled.flat();
+  return out;
 }
 
 function cacheKey(b) {
